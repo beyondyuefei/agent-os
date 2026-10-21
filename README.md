@@ -33,7 +33,7 @@ Agent-OS 把围绕一款商品的**完整经营闭环**抽象为可编排、可�
 ```
 ├── api/              接入层：MarketplaceController、飞书审批回调、租户拦截器
 ├── orchestration/    编排层：DAG 调度器、动态 DAG 引擎、审批网关、事件总线、任务看板
-├── business/         业务 Agent 层：10+ 经营 Agent + 业务服务 SPI（含 跨境 实现与 Mock）
+├── business/         业务 Agent 层：10+ 经营 Agent + 业务服务 SPI（含 CrossBorder 实现与 Mock）
 ├── core/             核心引擎：ReAct 运行时、会话、工具注册、权限、Hook、共享内存、用量追踪
 ├── domain/           领域模型：Product、Sku、GrowthPlan、ProfitReport 等
 └── infrastructure/   基础设施：Spring AI 适配器、JPA 持久化、飞书客户端、租户上下文
@@ -67,7 +67,7 @@ mvn clean package
 mvn spring-boot:run
 ```
 
-默认使用 Mock LLM 与 Mock 业务服务，无需外部依赖即可启动体验完整工作流；接入真实 OpenAI 与 跨境 业务系统时，在 `application.yml` 中配置对应密钥与 Mock Mode 开关。
+默认使用 Mock LLM 与 Mock 业务服务，无需外部依赖即可启动体验完整工作流；接入真实 OpenAI 与跨境电商业务系统时，在 `application.yml` 中配置对应密钥与 Mock Mode 开关。
 
 ## 业务 Agent 一览
 

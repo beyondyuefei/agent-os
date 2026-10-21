@@ -18,7 +18,7 @@ Agent-OS 面向**跨境电商经营场景**，把围绕一款商品的完整经�
 | **高风险操作无人把控** | 价格调整、库存变更、营销投放等关键动作直接由 Agent 执行存在业务风险 | 权限策略 + 人工审批网关（飞书审批），实现人在回路 |
 | **成本不可控** | LLM Token、调用次数、工具调用量缺乏统一计量 | UsageTracker 记录每次 LLM / Tool 调用与 Token 消耗 |
 | **多租户数据隔离** | 平台需服务多个独立卖家/站点，数据不能串扰 | TenantContext ThreadLocal + 请求拦截器，工具执行时优先取上下文租户 |
-| **可扩展性与可测试性** | 真实外部依赖（跨境、飞书）在开发/测试环境难以稳定联调 | 提供 Mock 实现与 Mock Mode 开关，支持分层测试 |
+| **可扩展性与可测试性** | 真实外部依赖（跨境电商后台、飞书）在开发/测试环境难以稳定联调 | 提供 Mock 实现与 Mock Mode 开关，支持分层测试 |
 
 ---
 
@@ -76,7 +76,7 @@ flowchart TB
         S[ChatModelLlmAdapter<br/>Spring AI 适配器]
         T[WorkflowPersistenceService<br/>JPA 持久化]
         U[FeishuApprovalGateway<br/>飞书审批实现]
-        V[跨境ApiClient + Services<br/>真实业务系统 SPI 实现]
+        V[CrossBorderApiClient + Services<br/>真实业务系统 SPI 实现]
         W[MockLlmClient / Mock Services<br/>Mock 实现]
         X[TenantContext<br/>租户上下文]
     end
@@ -84,7 +84,7 @@ flowchart TB
     subgraph 外部依赖["外部依赖"]
         Y1[OpenAI / gpt-4o-mini]
         Y2[Feishu 开放平台]
-        Y3[跨境 管理后台]
+        Y3[跨境电商管理后台]
         Y4[H2 / RDBMS]
     end
 
@@ -132,7 +132,7 @@ flowchart TB
 | **编排层** | 定义经营闭环 DAG、调度 Agent 并行执行、人工审批、事件发布 | `com.kuoge.agentos.orchestration.*` |
 | **业务 Agent 层** | 承载垂直领域 Agent 及其系统提示词、可用工具集；把业务服务 SPI 封装为工具 | `com.kuoge.agentos.business.*` |
 | **核心引擎层** | 与业务无关的通用 Agent 运行时：ReAct 循环、会话、工具、权限、钩子、成本 | `com.kuoge.agentos.core.*` |
-| **基础设施层** | 适配具体技术实现：Spring AI、JPA、飞书、跨境、Mock、租户上下文 | `com.kuoge.agentos.infrastructure.*` |
+| **基础设施层** | 适配具体技术实现：Spring AI、JPA、飞书、CrossBorder、Mock、租户上下文 | `com.kuoge.agentos.infrastructure.*` |
 | **领域层** | 纯 POJO / Record，描述商品、SKU、利润报告、增长计划、任务等核心实体 | `com.kuoge.agentos.domain.*` |
 
 ---
@@ -308,7 +308,7 @@ classDiagram
 |---|---|---|
 | `api` | `com.kuoge.agentos.api` | 对外暴露 HTTP 接口：启动工作流、查询流程/任务/Kanban/内存、接收飞书审批回调 |
 | `orchestration` | `com.kuoge.agentos.orchestration` | DAG 构建、并行调度、Agent 注册、人工审批抽象、事件发布、动态计划、Kanban、检查点 |
-| `business` | `com.kuoge.agentos.business` | 领域 Agent 实现（含 PlanningAgent）、业务服务 SPI、工具工厂、Mock/跨境 实现 |
+| `business` | `com.kuoge.agentos.business` | 领域 Agent 实现（含 PlanningAgent）、业务服务 SPI、工具工厂、Mock/CrossBorder 实现 |
 | `core` | `com.kuoge.agentos.core` | 通用 Agent 引擎：ReAct 运行时、会话、工具、权限、钩子、成本、LLM 抽象、共享内存、Agent Profile |
 | `infrastructure` | `com.kuoge.agentos.infrastructure` | 第三方适配、持久化、租户上下文、Mock 辅助、核心 Bean 装配 |
 | `domain` | `com.kuoge.agentos.domain` | 领域模型，无依赖，保持纯粹 |
@@ -337,7 +337,7 @@ classDiagram
 | `business` | `BaseBusinessAgent` / 10+ 个领域 Agent（含 PlanningAgent、ProductResearchAgent、ListingPublishAgent） | 封装系统提示词与可用工具范围，调用 ReAct 运行时 |
 | `business.service` | `ProductService` / `InventoryService` / `PricingService` / `MarketingService` / `AnalyticsService` / `OrderService` / `MarketResearchService` / `ListingService` | 业务服务 SPI（接口） |
 | `business.service.mock` | `Mock*Service` | 本地开发与单测使用的 Mock 实现 |
-| `business.service.跨境` | `跨境*Service` / `跨境ApiClient` / `跨境Properties` | 真实 跨境 后台 API 适配实现 |
+| `business.service.crossborder` | `CrossBorder*Service` / `CrossBorderApiClient` / `CrossBorderProperties` | 真实跨境电商后台 API 适配实现 |
 | `business.tool` | `MarketplaceToolFactory` | 将 SPI 实现注册为 `ToolRegistry`，并注入租户隔离逻辑 |
 
 #### orchestration —— 工作流编排
@@ -558,7 +558,7 @@ sequenceDiagram
 
 - **Agent 扩展**：实现 `BusinessAgent` 接口并在 `AgentRegistry` 注册即可接入编排。
 - **工具扩展**：实现 `Tool` 接口并通过 `ToolRegistry.register` 注册。
-- **服务 SPI 扩展**：`business.service` 定义接口，可新增 `Mock`、`跨境` 以外的实现（如 Shopify、Amazon SP-API）。
+- **服务 SPI 扩展**：`business.service` 定义接口，可新增 `Mock`、`CrossBorder` 以外的实现（如 Shopify、Amazon SP-API）。
 - **审批扩展**：实现 `HumanApprovalGateway` 可替换为钉钉、企业微信等审批系统。
 - **持久化扩展**：Repository 基于 Spring Data JPA，切换数据库只需改配置。
 
