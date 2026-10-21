@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.psylos1;
+package com.kuoge.agentos.business.service.跨境;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
@@ -7,22 +7,22 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Psylos1 真实后台 API 集成测试。
+ * 跨境 真实后台 API 集成测试。
  *
- * <p>需要设置 PSYLOS1_EMAIL 与 PSYLOS1_PASSWORD 环境变量才会执行。
+ * <p>需要设置 跨境_EMAIL 与 跨境_PASSWORD 环境变量才会执行。
  */
-@EnabledIfEnvironmentVariable(named = "PSYLOS1_EMAIL", matches = ".+")
-@EnabledIfEnvironmentVariable(named = "PSYLOS1_PASSWORD", matches = ".+")
-class Psylos1ApiClientIntegrationTest {
+@EnabledIfEnvironmentVariable(named = "跨境_EMAIL", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "跨境_PASSWORD", matches = ".+")
+class 跨境ApiClientIntegrationTest {
 
     @Test
     void shouldLoginAndCallBusinessApis() {
-        Psylos1Properties properties = new Psylos1Properties();
-        properties.setEmail(System.getenv("PSYLOS1_EMAIL"));
-        properties.setPassword(System.getenv("PSYLOS1_PASSWORD"));
-        properties.setTenantId(System.getenv().getOrDefault("PSYLOS1_TENANT_ID", "1"));
+        跨境Properties properties = new 跨境Properties();
+        properties.setEmail(System.getenv("跨境_EMAIL"));
+        properties.setPassword(System.getenv("跨境_PASSWORD"));
+        properties.setTenantId(System.getenv().getOrDefault("跨境_TENANT_ID", "1"));
 
-        Psylos1ApiClient client = new Psylos1ApiClient(properties);
+        跨境ApiClient client = new 跨境ApiClient(properties);
 
         // 商品 SKU 查询
         JsonNode skus = client.get("/api/product/skus", java.util.Map.of("keyword", "9926695059349504", "tenant_id", properties.getTenantId()));

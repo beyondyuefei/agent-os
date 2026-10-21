@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.psylos1;
+package com.kuoge.agentos.business.service.跨境;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,16 +16,16 @@ import java.net.URI;
 import java.util.Map;
 
 /**
- * Psylos1 管理后台 API 客户端。
+ * 跨境 管理后台 API 客户端。
  *
  * <p>统一处理登录、Token 刷新、GET/POST 请求和统一响应包装。
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class Psylos1ApiClient {
+public class 跨境ApiClient {
 
-    private final Psylos1Properties properties;
+    private final 跨境Properties properties;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestClient restClient = RestClient.builder().build();
 
@@ -51,10 +51,10 @@ public class Psylos1ApiClient {
         ensureToken();
         try {
             return doRequest(isPost, path, params, body);
-        } catch (Psylos1ApiException e) {
+        } catch (跨境ApiException e) {
             // Token 失效时重试一次
             if (e.getStatus() != null && e.getStatus().isSameCodeAs(org.springframework.http.HttpStatus.UNAUTHORIZED)) {
-                log.warn("Psylos1 token may expired, re-login and retry once");
+                log.warn("跨境 token may expired, re-login and retry once");
                 accessToken = null;
                 ensureToken();
                 return doRequest(isPost, path, params, body);
@@ -75,7 +75,7 @@ public class Psylos1ApiClient {
                     .body(body)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        throw new Psylos1ApiException("Psylos1 POST " + path + " failed: " + res.getStatusCode(),
+                        throw new 跨境ApiException("跨境 POST " + path + " failed: " + res.getStatusCode(),
                                 res.getStatusCode());
                     })
                     .body(String.class);
@@ -85,7 +85,7 @@ public class Psylos1ApiClient {
                     .header("Authorization", "Bearer " + accessToken)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (req, res) -> {
-                        throw new Psylos1ApiException("Psylos1 GET " + path + " failed: " + res.getStatusCode(),
+                        throw new 跨境ApiException("跨境 GET " + path + " failed: " + res.getStatusCode(),
                                 res.getStatusCode());
                     })
                     .body(String.class);
@@ -112,13 +112,13 @@ public class Psylos1ApiClient {
             JsonNode success = root.path("success");
             if (!success.isMissingNode() && !success.asBoolean(true)) {
                 String error = root.path("error").asText(root.path("codeDesc").asText("请求失败"));
-                throw new Psylos1ApiException("Psylos1 " + path + " error: " + error, (HttpStatusCode) null);
+                throw new 跨境ApiException("跨境 " + path + " error: " + error, (HttpStatusCode) null);
             }
             return root.path("data");
-        } catch (Psylos1ApiException e) {
+        } catch (跨境ApiException e) {
             throw e;
         } catch (Exception e) {
-            throw new Psylos1ApiException("Failed to parse Psylos1 response for " + path, e);
+            throw new 跨境ApiException("Failed to parse 跨境 response for " + path, e);
         }
     }
 
@@ -127,10 +127,10 @@ public class Psylos1ApiClient {
             return;
         }
         if (!properties.isEnabled()) {
-            throw new IllegalStateException("Psylos1 client is disabled");
+            throw new IllegalStateException("跨境 client is disabled");
         }
         if (properties.getEmail() == null || properties.getPassword() == null) {
-            throw new IllegalStateException("Psylos1 email/password not configured");
+            throw new IllegalStateException("跨境 email/password not configured");
         }
         String url = properties.getBaseUrl() + "/api/auth/login/password";
         Map<String, String> body = Map.of(
@@ -143,36 +143,36 @@ public class Psylos1ApiClient {
                 .body(body)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (req, res) -> {
-                    throw new Psylos1ApiException("Psylos1 login failed: " + res.getStatusCode(), res.getStatusCode());
+                    throw new 跨境ApiException("跨境 login failed: " + res.getStatusCode(), res.getStatusCode());
                 })
                 .body(String.class);
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode success = root.path("success");
             if (!success.isMissingNode() && !success.asBoolean(true)) {
-                throw new Psylos1ApiException("Psylos1 login error: " + root.path("error").asText(), (HttpStatusCode) null);
+                throw new 跨境ApiException("跨境 login error: " + root.path("error").asText(), (HttpStatusCode) null);
             }
             JsonNode data = root.path("data");
             accessToken = data.path("token").asText();
             long expiresIn = data.path("expiresIn").asLong(3_600_000L);
             tokenExpireAt = System.currentTimeMillis() + expiresIn;
-            log.info("Psylos1 login succeeded, token expires in {} ms", expiresIn);
-        } catch (Psylos1ApiException e) {
+            log.info("跨境 login succeeded, token expires in {} ms", expiresIn);
+        } catch (跨境ApiException e) {
             throw e;
         } catch (Exception e) {
-            throw new Psylos1ApiException("Failed to parse Psylos1 login response", e);
+            throw new 跨境ApiException("Failed to parse 跨境 login response", e);
         }
     }
 
-    public static class Psylos1ApiException extends RuntimeException {
+    public static class 跨境ApiException extends RuntimeException {
         private final org.springframework.http.HttpStatusCode status;
 
-        public Psylos1ApiException(String message, org.springframework.http.HttpStatusCode status) {
+        public 跨境ApiException(String message, org.springframework.http.HttpStatusCode status) {
             super(message);
             this.status = status;
         }
 
-        public Psylos1ApiException(String message, Throwable cause) {
+        public 跨境ApiException(String message, Throwable cause) {
             super(message, cause);
             this.status = null;
         }

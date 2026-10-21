@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.psylos1;
+package com.kuoge.agentos.business.service.跨境;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kuoge.agentos.business.service.OrderService;
@@ -9,14 +9,14 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 /**
- * 对接 Psylos1 订单中心的 {@link OrderService} 实现。
+ * 对接 跨境 订单中心的 {@link OrderService} 实现。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class Psylos1OrderService implements OrderService {
+public class 跨境OrderService implements OrderService {
 
-    private final Psylos1ApiClient apiClient;
+    private final 跨境ApiClient apiClient;
 
     @Override
     public JsonNode queryOrders(String tenantId, int pageNo, int pageSize) {

@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.psylos1;
+package com.kuoge.agentos.business.service.跨境;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kuoge.agentos.business.service.AnalyticsService;
@@ -10,14 +10,14 @@ import java.time.LocalDate;
 import java.util.Map;
 
 /**
- * 对接 Psylos1 数据日报的 {@link AnalyticsService} 实现。
+ * 对接 跨境 数据日报的 {@link AnalyticsService} 实现。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class Psylos1AnalyticsService implements AnalyticsService {
+public class 跨境AnalyticsService implements AnalyticsService {
 
-    private final Psylos1ApiClient apiClient;
+    private final 跨境ApiClient apiClient;
 
     @Override
     public double queryGmv(String tenantId, String sku, int days) {

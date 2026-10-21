@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.psylos1;
+package com.kuoge.agentos.business.service.跨境;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kuoge.agentos.business.service.MarketingService;
@@ -12,15 +12,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 对接 Psylos1 营销中心（优惠券、活动）的 {@link MarketingService} 实现。
+ * 对接 跨境 营销中心（优惠券、活动）的 {@link MarketingService} 实现。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class Psylos1MarketingService implements MarketingService {
+public class 跨境MarketingService implements MarketingService {
 
-    private final Psylos1ApiClient apiClient;
-    private final Psylos1Properties properties;
+    private final 跨境ApiClient apiClient;
+    private final 跨境Properties properties;
 
     @Override
     public String generateListingTitle(String tenantId, String sku) {
@@ -97,7 +97,7 @@ public class Psylos1MarketingService implements MarketingService {
         actions.addAll(List.of("Optimize listing title", "Publish SEO blog", "Generate UGC reviews", "Build email sequence"));
         return new GrowthPlan(
                 sku,
-                "Natural Traffic Growth Plan (Psylos1)",
+                "Natural Traffic Growth Plan (跨境)",
                 actions.stream().distinct().limit(6).toList(),
                 "Expected 36x organic traffic growth in 30 days",
                 true

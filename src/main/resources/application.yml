@@ -38,10 +38,10 @@ agentos:
       approver-open-id: ${FEISHU_APPROVER_OPEN_ID:}
       poll-interval-ms: 5000
       max-poll-times: 60
-  psylos1:
-    base-url: ${PSYLOS1_BASE_URL:https://test.admin.psylos1.com}
-    email: ${PSYLOS1_EMAIL:}
-    password: ${PSYLOS1_PASSWORD:}
-    tenant-id: ${PSYLOS1_TENANT_ID:1}
-    site: ${PSYLOS1_SITE:self_site}
-    enabled: ${PSYLOS1_ENABLED:true}
+  跨境:
+    base-url: ${跨境_BASE_URL:https://test.admin.跨境.com}
+    email: ${跨境_EMAIL:}
+    password: ${跨境_PASSWORD:}
+    tenant-id: ${跨境_TENANT_ID:1}
+    site: ${跨境_SITE:self_site}
+    enabled: ${跨境_ENABLED:true}
