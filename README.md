@@ -92,4 +92,4 @@ mvn spring-boot:run
 
 ## License
 
-待定（暂未指定开源协议）
+本项目基于 [Apache License 2.0](LICENSE) 开源。
