@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.跨境;
+package com.kuoge.agentos.business.service.crossborder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kuoge.agentos.business.service.PricingService;
@@ -10,17 +10,17 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 /**
- * 对接 跨境 商品成本的 {@link PricingService} 实现。
+ * 对接 CrossBorder 商品成本的 {@link PricingService} 实现。
  *
  * <p>物流、佣金等字段当前后台未暴露独立接口，保留合理默认值。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class 跨境PricingService implements PricingService {
+public class CrossBorderPricingService implements PricingService {
 
-    private final 跨境ApiClient apiClient;
-    private final 跨境Properties properties;
+    private final CrossBorderApiClient apiClient;
+    private final CrossBorderProperties properties;
 
     @Override
     public double getProductCost(String tenantId, String sku) {

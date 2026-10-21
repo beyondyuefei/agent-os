@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.跨境;
+package com.kuoge.agentos.business.service.crossborder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kuoge.agentos.business.service.ProductService;
@@ -14,15 +14,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 对接 跨境 真实商品中心的 {@link ProductService} 实现。
+ * 对接 CrossBorder 真实商品中心的 {@link ProductService} 实现。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class 跨境ProductService implements ProductService {
+public class CrossBorderProductService implements ProductService {
 
-    private final 跨境ApiClient apiClient;
-    private final 跨境Properties properties;
+    private final CrossBorderApiClient apiClient;
+    private final CrossBorderProperties properties;
 
     @Override
     public Product getProduct(String tenantId, String sku) {
@@ -30,7 +30,7 @@ public class 跨境ProductService implements ProductService {
         JsonNode data = apiClient.get("/api/product/skus", Map.of("keyword", sku, "tenant_id", effectiveTenantId));
         JsonNode list = data == null ? null : data.path("list");
         if (list == null || !list.isArray() || list.isEmpty()) {
-            log.warn("跨境 product not found for sku={}", sku);
+            log.warn("CrossBorder product not found for sku={}", sku);
             throw new IllegalArgumentException("Product not found: " + sku);
         }
         JsonNode item = list.get(0);

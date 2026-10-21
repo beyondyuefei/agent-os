@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.跨境;
+package com.kuoge.agentos.business.service.crossborder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.kuoge.agentos.business.service.InventoryService;
@@ -9,15 +9,15 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 /**
- * 对接 跨境 库存/履约数据的 {@link InventoryService} 实现。
+ * 对接 CrossBorder 库存/履约数据的 {@link InventoryService} 实现。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class 跨境InventoryService implements InventoryService {
+public class CrossBorderInventoryService implements InventoryService {
 
-    private final 跨境ApiClient apiClient;
-    private final 跨境Properties properties;
+    private final CrossBorderApiClient apiClient;
+    private final CrossBorderProperties properties;
 
     @Override
     public int getStock(String tenantId, String sku) {
@@ -54,7 +54,7 @@ public class 跨境InventoryService implements InventoryService {
                     Map.of("pageNo", 1, "pageSize", 1));
             int totalOrders = data == null ? 0 : data.path("totalSize").asInt(0);
             return String.format(
-                    "Demand forecast (跨境): stable, recent total orders=%d, expected 150 units/day for sku=%s",
+                    "Demand forecast (CrossBorder): stable, recent total orders=%d, expected 150 units/day for sku=%s",
                     totalOrders, sku);
         } catch (Exception e) {
             log.warn("Failed to forecast demand for sku={}", sku, e);

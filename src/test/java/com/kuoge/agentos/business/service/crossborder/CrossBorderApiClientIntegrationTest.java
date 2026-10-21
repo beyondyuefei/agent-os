@@ -1,4 +1,4 @@
-package com.kuoge.agentos.business.service.跨境;
+package com.kuoge.agentos.business.service.crossborder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
@@ -7,22 +7,22 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 跨境 真实后台 API 集成测试。
+ * CrossBorder 真实后台 API 集成测试。
  *
- * <p>需要设置 跨境_EMAIL 与 跨境_PASSWORD 环境变量才会执行。
+ * <p>需要设置 CrossBorder_EMAIL 与 CrossBorder_PASSWORD 环境变量才会执行。
  */
-@EnabledIfEnvironmentVariable(named = "跨境_EMAIL", matches = ".+")
-@EnabledIfEnvironmentVariable(named = "跨境_PASSWORD", matches = ".+")
-class 跨境ApiClientIntegrationTest {
+@EnabledIfEnvironmentVariable(named = "CrossBorder_EMAIL", matches = ".+")
+@EnabledIfEnvironmentVariable(named = "CrossBorder_PASSWORD", matches = ".+")
+class CrossBorderApiClientIntegrationTest {
 
     @Test
     void shouldLoginAndCallBusinessApis() {
-        跨境Properties properties = new 跨境Properties();
-        properties.setEmail(System.getenv("跨境_EMAIL"));
-        properties.setPassword(System.getenv("跨境_PASSWORD"));
-        properties.setTenantId(System.getenv().getOrDefault("跨境_TENANT_ID", "1"));
+        CrossBorderProperties properties = new CrossBorderProperties();
+        properties.setEmail(System.getenv("CrossBorder_EMAIL"));
+        properties.setPassword(System.getenv("CrossBorder_PASSWORD"));
+        properties.setTenantId(System.getenv().getOrDefault("CrossBorder_TENANT_ID", "1"));
 
-        跨境ApiClient client = new 跨境ApiClient(properties);
+        CrossBorderApiClient client = new CrossBorderApiClient(properties);
 
         // 商品 SKU 查询
         JsonNode skus = client.get("/api/product/skus", java.util.Map.of("keyword", "9926695059349504", "tenant_id", properties.getTenantId()));

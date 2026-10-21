@@ -22,7 +22,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 跨境电商经营编排器 —— Hermes 风格分层多 Agent 编排入口。
+ * CrossBorder电商经营编排器 —— Hermes 风格分层多 Agent 编排入口。
  *
  * <p>主要职责：
  * <ul>

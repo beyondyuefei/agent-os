@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 跨境电商经营工作流 API。
+ * CrossBorder电商经营工作流 API。
  */
 @RestController
 @RequestMapping("/api/v1/workflows")
