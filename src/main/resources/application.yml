@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: agent-os
+
+  datasource:
+    url: jdbc:h2:mem:agentos;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+
+server:
+  port: 8080
+
+agentos:
+  feishu:
+    approval:
+      mock-mode: true
+      app-id: ${FEISHU_APP_ID:}
+      app-secret: ${FEISHU_APP_SECRET:}
+      approval-code: ${FEISHU_APPROVAL_CODE:}
+      approver-open-id: ${FEISHU_APPROVER_OPEN_ID:}
+      poll-interval-ms: 5000
+      max-poll-times: 60
+  psylos1:
+    base-url: ${PSYLOS1_BASE_URL:https://test.admin.psylos1.com}
+    email: ${PSYLOS1_EMAIL:}
+    password: ${PSYLOS1_PASSWORD:}
+    tenant-id: ${PSYLOS1_TENANT_ID:1}
+    site: ${PSYLOS1_SITE:self_site}
+    enabled: ${PSYLOS1_ENABLED:true}
