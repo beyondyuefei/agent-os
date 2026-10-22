@@ -80,6 +80,17 @@ public class AdCreateExecuteService implements DomainService<String, AdCreateExe
             return new Output(null, null, AdCreateReceipt.Status.UNKNOWN, false);
         }
         try {
+            // 3.5 获取执行权后二次校验：各防线之间存在时间窗，
+            // 并发场景下其他线程可能已在本线程检查之后完成创建 / 转待查
+            Output completed = successReceipts.get(idempotencyKey);
+            if (completed != null) {
+                return new Output(completed.platformRequestId(), completed.platformAdId(),
+                        completed.status(), true);
+            }
+            if (item.getStatus() == com.kuoge.agentos.delivery.DeliveryItemStatus.PENDING_CHECK) {
+                return new Output(item.getPlatformRequestId(), null,
+                        AdCreateReceipt.Status.UNKNOWN, false);
+            }
             // 限次重试：创建失败项走 RETRY_CREATE 回创建中；新项走 CREATE_START
             if (item.getStatus() == com.kuoge.agentos.delivery.DeliveryItemStatus.CREATE_FAILED) {
                 stateMachine.transit(item, DeliveryItemAction.RETRY_CREATE, "limited retry");

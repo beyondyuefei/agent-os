@@ -11,6 +11,7 @@ import com.kuoge.agentos.channel.mock.MockAdChannelAdapter;
 import com.kuoge.agentos.delivery.BudgetLedger;
 import com.kuoge.agentos.delivery.DeliveryItemRepository;
 import com.kuoge.agentos.delivery.DeliveryItemStateMachine;
+import com.kuoge.agentos.skill.md.SkillLibrary;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,6 +41,12 @@ public class AdsFeatureConfig {
     @Bean
     public BudgetLedger budgetLedger() {
         return new BudgetLedger();
+    }
+
+    /** SKILL.md 提示词库（三级渐进加载：metadata 常驻 / body 按需 / references 按需） */
+    @Bean
+    public SkillLibrary skillLibrary() {
+        return new SkillLibrary();
     }
 
     @Bean
