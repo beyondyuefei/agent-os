@@ -11,7 +11,11 @@ import com.kuoge.agentos.channel.mock.MockAdChannelAdapter;
 import com.kuoge.agentos.delivery.BudgetLedger;
 import com.kuoge.agentos.delivery.DeliveryItemRepository;
 import com.kuoge.agentos.delivery.DeliveryItemStateMachine;
+import com.kuoge.agentos.api.SkillAdminService;
+import com.kuoge.agentos.infrastructure.persistence.JpaSkillOverrideStore;
+import com.kuoge.agentos.infrastructure.persistence.repository.SkillTemplateRepository;
 import com.kuoge.agentos.skill.md.SkillLibrary;
+import com.kuoge.agentos.skill.md.SkillOverrideStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,10 +47,21 @@ public class AdsFeatureConfig {
         return new BudgetLedger();
     }
 
-    /** SKILL.md 提示词库（三级渐进加载：metadata 常驻 / body 按需 / references 按需） */
+    /** SKILL.md 提示词库（三级渐进加载；数据库覆盖优先于 classpath 默认模板） */
     @Bean
-    public SkillLibrary skillLibrary() {
-        return new SkillLibrary();
+    public SkillLibrary skillLibrary(SkillOverrideStore skillOverrideStore) {
+        return new SkillLibrary(skillOverrideStore);
+    }
+
+    @Bean
+    public SkillOverrideStore skillOverrideStore(SkillTemplateRepository repository) {
+        return new JpaSkillOverrideStore(repository);
+    }
+
+    @Bean
+    public SkillAdminService skillAdminService(SkillLibrary skillLibrary,
+                                               SkillOverrideStore skillOverrideStore) {
+        return new SkillAdminService(skillLibrary, skillOverrideStore);
     }
 
     @Bean

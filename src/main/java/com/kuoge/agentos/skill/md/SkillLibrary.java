@@ -20,7 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>body 按需：{@link #load(String)} 首次调用时读正文并缓存；</li>
  *   <li>references 按需：{@link #loadReference(String, String)} 单独加载引用文件。</li>
  * </ol>
- * 提示词模板外部化后，运营调整提示词不需要改 Java 代码、不需要发版逻辑变更。
+ * 内容解析优先级：{@link SkillOverrideStore}（数据库，运营后台写入）> classpath 默认模板。
+ * 覆盖内容变更后需调用 {@link #invalidate(String)} 使缓存失效。
  */
 public class SkillLibrary {
 
@@ -30,12 +31,20 @@ public class SkillLibrary {
     private final Map<String, SkillMetadata> catalog = new ConcurrentHashMap<>();
     /** name → SKILL.md 资源（body 延迟读取） */
     private final Map<String, Resource> sources = new ConcurrentHashMap<>();
-    /** name → 已加载文档（缓存） */
+    /** name → 已加载文档（缓存；覆盖变更后由 invalidate 清除） */
     private final Map<String, SkillDocument> loaded = new ConcurrentHashMap<>();
+
+    /** 覆盖存储（可为 null = 仅 classpath） */
+    private final SkillOverrideStore overrideStore;
 
     private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
     public SkillLibrary() {
+        this(null);
+    }
+
+    public SkillLibrary(SkillOverrideStore overrideStore) {
+        this.overrideStore = overrideStore;
         scan();
     }
 
@@ -64,9 +73,17 @@ public class SkillLibrary {
         return catalog.containsKey(name);
     }
 
-    /** 第二级：按需加载 body（首次读取，之后命中缓存） */
+    /** 第二级：按需加载 body（数据库覆盖优先，classpath 兜底；命中缓存） */
     public SkillDocument load(String name) {
         return loaded.computeIfAbsent(name, key -> {
+            // 覆盖优先：DB 中的完整 SKILL.md 内容
+            if (overrideStore != null) {
+                Optional<String> overridden = overrideStore.findContent(key, null);
+                if (overridden.isPresent()) {
+                    SkillMdParser.Parsed parsed = SkillMdParser.parse(overridden.get(), key + "(override)");
+                    return new SkillDocument(parsed.metadata(), parsed.body(), listReferences(key));
+                }
+            }
             Resource resource = sources.get(key);
             if (resource == null) {
                 throw new IllegalArgumentException("Skill not found in library: " + key);
@@ -81,10 +98,16 @@ public class SkillLibrary {
         });
     }
 
-    /** 第三级：按需加载 references/ 下的引用文件 */
+    /** 第三级：按需加载 references/ 下的引用文件（数据库覆盖优先，classpath 兜底） */
     public String loadReference(String name, String reference) {
         if (reference.contains("/") || reference.contains("..")) {
             throw new IllegalArgumentException("Illegal reference path: " + reference);
+        }
+        if (overrideStore != null) {
+            Optional<String> overridden = overrideStore.findContent(name, reference);
+            if (overridden.isPresent()) {
+                return overridden.get();
+            }
         }
         try {
             Resource resource = resolver.getResource(
@@ -97,6 +120,16 @@ public class SkillLibrary {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to load skill reference: " + name + "/" + reference, e);
         }
+    }
+
+    /** 覆盖内容变更后使缓存失效（运营后台保存 / 删除时调用） */
+    public void invalidate(String name) {
+        loaded.remove(name);
+    }
+
+    /** 覆盖存储是否已接入 */
+    public boolean overrideStorePresent() {
+        return overrideStore != null;
     }
 
     /** 便捷方法：加载 body 并按变量渲染 */
