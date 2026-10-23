@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 基于数据库的 Skill 覆盖存储（运营后台写入，运行时优先于 classpath 读取）。
+ * 基于数据库的 Skill 模板存储（运行时唯一数据源；
+ * 种子由 SkillTemplateBootstrap 在启动时从 classpath 导入）。
  */
 public class JpaSkillOverrideStore implements SkillOverrideStore {
 
@@ -19,9 +20,10 @@ public class JpaSkillOverrideStore implements SkillOverrideStore {
     }
 
     @Override
-    public Optional<String> findContent(String skillName, String reference) {
+    public Optional<OverrideEntry> findEntry(String skillName, String reference) {
         return repository.findById(SkillTemplateEntity.buildId(skillName, reference))
-                .map(SkillTemplateEntity::getContent);
+                .map(e -> new OverrideEntry(e.getSkillName(), e.getReferenceKey(),
+                        e.getContent(), e.getUpdatedBy()));
     }
 
     @Override

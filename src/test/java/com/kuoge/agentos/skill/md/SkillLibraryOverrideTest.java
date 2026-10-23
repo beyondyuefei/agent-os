@@ -18,16 +18,16 @@ class SkillLibraryOverrideTest {
 
     /** 内存版覆盖存储 */
     private static class InMemoryOverrideStore implements SkillOverrideStore {
-        private final Map<String, String> data = new HashMap<>();
+        private final Map<String, OverrideEntry> data = new HashMap<>();
 
         @Override
-        public Optional<String> findContent(String skillName, String reference) {
+        public Optional<OverrideEntry> findEntry(String skillName, String reference) {
             return Optional.ofNullable(data.get(key(skillName, reference)));
         }
 
         @Override
         public void saveContent(String skillName, String reference, String content, String updatedBy) {
-            data.put(key(skillName, reference), content);
+            data.put(key(skillName, reference), new OverrideEntry(skillName, reference, content, updatedBy));
         }
 
         @Override

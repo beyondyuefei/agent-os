@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skill 模板管理</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+         background: #f5f6f8; color: #1f2329; height: 100vh; display: flex; flex-direction: column; }
+  header { background: #fff; border-bottom: 1px solid #e5e6eb; padding: 14px 24px;
+           display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header .sub { font-size: 12px; color: #8f959e; }
+  main { flex: 1; display: flex; overflow: hidden; }
+  /* 左栏：模板列表 */
+  .list { width: 300px; background: #fff; border-right: 1px solid #e5e6eb; overflow-y: auto; }
+  .skill-item { padding: 14px 18px; border-bottom: 1px solid #f2f3f5; cursor: pointer; }
+  .skill-item:hover { background: #f7f8fa; }
+  .skill-item.active { background: #e8f3ff; border-left: 3px solid #165dff; }
+  .skill-item .name { font-size: 14px; font-weight: 600; font-family: ui-monospace, monospace; }
+  .skill-item .desc { font-size: 12px; color: #646a73; margin-top: 4px; line-height: 1.5;
+                      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .skill-item .meta { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  /* 徽章 */
+  .badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: #f2f3f5; color: #646a73; }
+  .badge.ops { background: #fff1e8; color: #d46b08; }
+  .badge.seed { background: #e8ffea; color: #00b42a; }
+  .badge.ver { background: #e8f3ff; color: #165dff; }
+  /* 右栏：编辑 */
+  .editor { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .tabs { background: #fff; border-bottom: 1px solid #e5e6eb; padding: 0 20px; display: flex; gap: 4px; }
+  .tab { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent;
+         font-family: ui-monospace, monospace; display: flex; align-items: center; gap: 6px; }
+  .tab:hover { color: #165dff; }
+  .tab.active { border-bottom-color: #165dff; color: #165dff; font-weight: 600; }
+  .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: #d4d6da; }
+  .tab .dot.ops { background: #d46b08; }
+  .editor-body { flex: 1; padding: 16px 20px; overflow: hidden; display: flex; flex-direction: column; }
+  textarea { flex: 1; width: 100%; resize: none; border: 1px solid #e5e6eb; border-radius: 6px;
+             padding: 12px; font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+             line-height: 1.6; background: #fff; }
+  textarea:focus { outline: none; border-color: #165dff; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; }
+  .toolbar .src { font-size: 12px; color: #8f959e; flex: 1; }
+  button { border: 1px solid #e5e6eb; background: #fff; border-radius: 6px; padding: 7px 16px;
+           font-size: 13px; cursor: pointer; }
+  button.primary { background: #165dff; border-color: #165dff; color: #fff; }
+  button.danger { color: #f53f3f; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+           background: #1f2329; color: #fff; padding: 8px 18px; border-radius: 6px;
+           font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #8f959e; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Skill 模板管理</h1>
+  <span class="sub">数据库为运行时唯一数据源 · 保存即生效 · 回退即恢复默认</span>
+</header>
+<main>
+  <div class="list" id="skillList"></div>
+  <div class="editor" id="editor"><div class="empty">← 选择左侧模板开始编辑</div></div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const API = '/api/admin/skills';
+let skills = [], current = null, currentRef = null, detail = null;
+
+async function api(path, opts) {
+  const res = await fetch(API + path, opts);
+  if (!res.ok) throw new Error((await res.text()) || res.statusText);
+  return res.status === 204 ? null : res.json();
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity = 1;
+  setTimeout(() => t.style.opacity = 0, 2200);
+}
+function sourceLabel(s) {
+  return { SEED: '默认值（随版本评审发布）', DB_OPS: '运营已修改', CLASSPATH: '无记录·读取包内兜底' }[s] || s;
+}
+
+async function loadList() {
+  skills = await api('');
+  const el = document.getElementById('skillList');
+  el.innerHTML = skills.map(s => `
+    <div class="skill-item ${current === s.metadata.name ? 'active' : ''}"
+         onclick="selectSkill('${s.metadata.name}')">
+      <div class="name">${s.metadata.name}</div>
+      <div class="desc">${s.metadata.description}</div>
+      <div class="meta">
+        <span class="badge ver">${s.metadata.version}</span>
+        <span class="badge ${s.bodyModified ? 'ops' : 'seed'}">${s.bodyModified ? '运营已改' : '默认'}</span>
+        ${s.modifiedReferences.length ? `<span class="badge ops">${s.modifiedReferences.length} 个引用已改</span>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function selectSkill(name) {
+  current = name; currentRef = null;
+  detail = await api('/' + name);
+  renderEditor();
+  loadList();
+}
+
+function renderEditor() {
+  const refs = detail.references;
+  const modified = new Set(detail.modifiedReferences);
+  const tabs = [`<div class="tab ${currentRef === null ? 'active' : ''}" onclick="switchTab(null)">
+      <span class="dot ${detail.bodyModified ? 'ops' : ''}"></span>SKILL.md</div>`]
+    .concat(refs.map(r => `<div class="tab ${currentRef === r ? 'active' : ''}" onclick="switchTab('${r}')">
+      <span class="dot ${modified.has(r) ? 'ops' : ''}"></span>${r}</div>`));
+  document.getElementById('editor').innerHTML = `
+    <div class="tabs">${tabs.join('')}</div>
+    <div class="editor-body">
+      <textarea id="content" spellcheck="false"></textarea>
+      <div class="toolbar">
+        <span class="src" id="srcLabel"></span>
+        <button class="danger" id="btnRevert" onclick="revert()">回退默认</button>
+        <button class="primary" onclick="save()">保存生效</button>
+      </div>
+    </div>`;
+  loadContent();
+}
+
+async function switchTab(ref) { currentRef = ref; renderEditor(); }
+
+async function loadContent() {
+  const view = await api('/' + current + '/content' + (currentRef ? '?ref=' + currentRef : ''));
+  document.getElementById('content').value = view.content;
+  const isOps = view.source === 'DB_OPS';
+  document.getElementById('srcLabel').textContent = '来源：' + sourceLabel(view.source);
+  document.getElementById('btnRevert').disabled = !isOps;
+}
+
+async function save() {
+  const content = document.getElementById('content').value;
+  let body = content;
+  if (currentRef === null && !content.trimStart().startsWith('---')) {
+    // body 编辑展示的是解析后正文，保存时包回 frontmatter
+    const m = detail.metadata;
+    body = `---\nname: ${m.name}\ndescription: ${m.description}\nversion: ${m.version}\nform: ${m.form}\nrisk: ${m.risk}\nplans: ${m.plans}\n---\n\n${content}`;
+  }
+  try {
+    await api('/' + current + '/content' + (currentRef ? '?ref=' + currentRef : '') + '&updatedBy=ops-panel',
+      { method: 'PUT', body });
+    toast('已保存并生效');
+    detail = await api('/' + current);
+    renderEditor(); loadList();
+  } catch (e) { toast('保存失败：' + e.message); }
+}
+
+async function revert() {
+  if (!confirm('确认回退到默认模板？当前修改将被删除。')) return;
+  await api('/' + current + '/content' + (currentRef ? '?ref=' + currentRef : ''), { method: 'DELETE' });
+  toast('已回退默认');
+  detail = await api('/' + current);
+  renderEditor(); loadList();
+}
+
+loadList().catch(e => toast('加载失败：' + e.message));
+</script>
+</body>
+</html>

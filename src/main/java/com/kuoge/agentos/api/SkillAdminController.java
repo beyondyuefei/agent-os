@@ -27,10 +27,16 @@ public class SkillAdminController {
         this.service = service;
     }
 
-    /** 模板清单：元数据 + 覆盖状态 */
+    /** 模板清单：元数据 + 运营修改状态 */
     @GetMapping
     public List<SkillAdminService.SkillView> list() {
         return service.list();
+    }
+
+    /** 详情：元数据 + 可用引用文件清单 + 修改状态 */
+    @GetMapping("/{name}")
+    public SkillAdminService.SkillDetailView detail(@PathVariable String name) {
+        return service.detail(name);
     }
 
     /** 读取生效内容；ref 为空 = SKILL.md body，否则为 references/ 文件名 */

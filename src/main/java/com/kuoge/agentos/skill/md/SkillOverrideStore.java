@@ -4,26 +4,44 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Skill 内容覆盖存储（优先级高于 classpath 默认值）。
- * 运营在管理后台修改的模板落库后，经此接口被 {@link SkillLibrary} 优先读取；
- * 删除覆盖记录即回退到 jar 内随版本发布的默认模板。
+ * Skill 内容存储（数据库为运行时唯一数据源；classpath 仅作启动种子与防御兜底）。
+ * 种子行 updatedBy = {@link #SEED_AUTHOR}，运营修改行 updatedBy 为操作人，
+ * 后台据此区分"默认值"与"运营已修改"。
  */
 public interface SkillOverrideStore {
 
+    /** 种子行的 updatedBy 标识 */
+    String SEED_AUTHOR = "seed:classpath";
+
+    /** 存储记录（含审计字段） */
+    record OverrideEntry(String skillName, String reference, String content, String updatedBy) {}
+
     /**
-     * 查询覆盖内容。
+     * 查询记录。
      *
      * @param skillName 模板名（skills/ 目录下文件夹名）
      * @param reference null 或空串 = SKILL.md body；否则为 references/ 下文件名
      */
-    Optional<String> findContent(String skillName, String reference);
+    Optional<OverrideEntry> findEntry(String skillName, String reference);
 
-    /** 保存 / 更新覆盖内容 */
+    /** 便捷方法：仅取内容 */
+    default Optional<String> findContent(String skillName, String reference) {
+        return findEntry(skillName, reference).map(OverrideEntry::content);
+    }
+
+    /** 保存 / 更新内容（运营修改或种子导入） */
     void saveContent(String skillName, String reference, String content, String updatedBy);
 
-    /** 删除覆盖（回退 classpath 默认） */
+    /** 删除记录（运营回退 → 运行时兜底读 classpath，内容与种子一致） */
     void deleteContent(String skillName, String reference);
 
-    /** 覆盖记录清单：skillName 或 skillName/reference */
+    /** 记录清单：skillName（body）或 skillName/reference */
     List<String> listOverrides();
+
+    /** 是否运营修改过（非种子行） */
+    default boolean isOpsModified(String skillName, String reference) {
+        return findEntry(skillName, reference)
+                .map(e -> !SEED_AUTHOR.equals(e.updatedBy()))
+                .orElse(false);
+    }
 }

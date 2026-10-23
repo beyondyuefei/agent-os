@@ -9,47 +9,65 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Skill 模板管理（运营后台服务端逻辑）：
- * 覆盖内容落库优先于 classpath 默认模板；保存 body 时做 frontmatter 校验，
- * 防止运营保存格式错误的模板导致运行时渲染失败。
+ * Skill 模板管理（运营后台服务端逻辑）。
+ * 数据库是运行时唯一数据源（启动时从 classpath 种子导入）；后台据此区分：
+ * SEED = 种子默认值（随版本评审发布）；DB_OPS = 运营修改；CLASSPATH = 无记录兜底。
+ * 保存 body 时做 frontmatter 校验，防止格式错误的模板导致运行时渲染失败。
  */
 public class SkillAdminService {
 
-    /** 模板视图：元数据 + 是否存在数据库覆盖 */
-    public record SkillView(SkillMetadata metadata, boolean bodyOverridden,
-                            List<String> overriddenReferences) {}
+    /** 模板视图：元数据 + 运营修改状态 */
+    public record SkillView(SkillMetadata metadata, boolean bodyModified,
+                            List<String> modifiedReferences) {}
 
-    /** 内容视图：生效内容 + 来源（DB / CLASSPATH） */
+    /** 详情视图：模板元数据 + 可用引用文件清单（供编辑器切换） */
+    public record SkillDetailView(SkillMetadata metadata, List<String> references,
+                                  boolean bodyModified, List<String> modifiedReferences) {}
+
+    /** 内容视图：生效内容 + 来源（SEED / DB_OPS / CLASSPATH） */
     public record ContentView(String content, String source) {}
 
     private final SkillLibrary library;
-    private final SkillOverrideStore overrideStore;
+    private final SkillOverrideStore store;
 
-    public SkillAdminService(SkillLibrary library, SkillOverrideStore overrideStore) {
+    public SkillAdminService(SkillLibrary library, SkillOverrideStore store) {
         this.library = library;
-        this.overrideStore = overrideStore;
+        this.store = store;
     }
 
     public List<SkillView> list() {
         return library.catalog().stream()
                 .map(meta -> new SkillView(meta,
-                        overrideStore.findContent(meta.name(), null).isPresent(),
-                        overrideStore.listOverrides().stream()
-                                .filter(id -> id.startsWith(meta.name() + "/"))
-                                .map(id -> id.substring(meta.name().length() + 1))
-                                .toList()))
+                        store.isOpsModified(meta.name(), null),
+                        modifiedReferences(meta.name())))
                 .toList();
     }
 
-    /** 读取生效内容（覆盖优先），source 标明来自 DB 还是 CLASSPATH；body 统一返回解析后的正文 */
+    /** 详情：元数据 + 全部可用引用文件 + 修改状态 */
+    public SkillDetailView detail(String name) {
+        SkillMetadata meta = library.metadata(name)
+                .orElseThrow(() -> new IllegalArgumentException("Skill not found: " + name));
+        return new SkillDetailView(meta, library.load(name).references(),
+                store.isOpsModified(name, null), modifiedReferences(name));
+    }
+
+    private List<String> modifiedReferences(String name) {
+        return store.listOverrides().stream()
+                .filter(id -> id.startsWith(name + "/"))
+                .map(id -> id.substring(name.length() + 1))
+                .filter(ref -> store.isOpsModified(name, ref))
+                .toList();
+    }
+
+    /** 读取生效内容；source ∈ SEED（默认值）/ DB_OPS（运营改过）/ CLASSPATH（无记录兜底）；body 统一返回解析后正文 */
     public ContentView effectiveContent(String name, String reference) {
         boolean isBody = reference == null || reference.isBlank();
-        Optional<String> overridden = overrideStore.findContent(name, reference);
-        if (overridden.isPresent()) {
-            String content = overridden.get();
+        Optional<SkillOverrideStore.OverrideEntry> entry = store.findEntry(name, reference);
+        if (entry.isPresent()) {
+            String content = entry.get().content();
             return new ContentView(
-                    isBody ? SkillMdParser.parse(content, name + "(override)").body() : content,
-                    "DB");
+                    isBody ? SkillMdParser.parse(content, name + "(store)").body() : content,
+                    SkillOverrideStore.SEED_AUTHOR.equals(entry.get().updatedBy()) ? "SEED" : "DB_OPS");
         }
         String content = isBody
                 ? library.load(name).body()
@@ -57,18 +75,18 @@ public class SkillAdminService {
         return new ContentView(content, "CLASSPATH");
     }
 
-    /** 保存覆盖：body（ref 为空）必须是可解析的 SKILL.md 格式 */
+    /** 保存：body（ref 为空）必须是可解析的 SKILL.md 格式 */
     public void saveOverride(String name, String reference, String content, String updatedBy) {
         if (reference == null || reference.isBlank()) {
             SkillMdParser.parse(content, name + "(admin)");   // 校验失败即拒绝保存
         }
-        overrideStore.saveContent(name, reference, content, updatedBy);
+        store.saveContent(name, reference, content, updatedBy);
         library.invalidate(name);
     }
 
-    /** 删除覆盖 → 回退 classpath 默认模板 */
+    /** 删除记录 → 兜底读 classpath（内容与种子一致，即回退默认） */
     public void revert(String name, String reference) {
-        overrideStore.deleteContent(name, reference);
+        store.deleteContent(name, reference);
         library.invalidate(name);
     }
 }

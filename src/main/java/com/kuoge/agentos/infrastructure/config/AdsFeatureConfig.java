@@ -64,6 +64,12 @@ public class AdsFeatureConfig {
         return new SkillAdminService(skillLibrary, skillOverrideStore);
     }
 
+    /** 启动种子：jar 内 md 模板初始化入库（已有运营覆盖的 skill 不冲掉） */
+    @Bean
+    public SkillTemplateBootstrap skillTemplateBootstrap(SkillTemplateRepository repository) {
+        return new SkillTemplateBootstrap(repository);
+    }
+
     @Bean
     public DeliveryItemApprovalProvider deliveryItemApprovalProvider(DeliveryItemRepository repository) {
         return (tenantId, deliveryItemId) -> repository.findById(deliveryItemId)
