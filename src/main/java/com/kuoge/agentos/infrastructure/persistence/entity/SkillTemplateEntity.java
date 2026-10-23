@@ -11,9 +11,9 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.Instant;
 
 /**
- * Skill 模板覆盖表：运营在管理后台修改的 SKILL.md body / references 内容。
- * 存在记录 = 覆盖生效；删除记录 = 回退 classpath 默认模板。
- * 主键格式：skillName（body）或 skillName/reference（引用文件）。
+ * Skill 模板当前生效内容表：运行时读取的唯一数据源。
+ * 主键格式：skillName/templateKey。
+ * 种子由 SkillTemplateBootstrap 从 contract.yaml 导入；运营发布经版本快照表审计后写入。
  */
 @Entity
 @Table(name = "skill_template")
@@ -27,9 +27,9 @@ public class SkillTemplateEntity {
     @Column(length = 96, nullable = false)
     private String skillName;
 
-    /** null / 空串 = SKILL.md body；否则为 references/ 下文件名 */
-    @Column(length = 64)
-    private String referenceKey;
+    /** contract.yaml templates 下声明的模板键 */
+    @Column(length = 64, nullable = false)
+    private String templateKey;
 
     @Lob
     @Column(nullable = false)
@@ -41,8 +41,7 @@ public class SkillTemplateEntity {
     @UpdateTimestamp
     private Instant updatedAt;
 
-    public static String buildId(String skillName, String reference) {
-        return reference == null || reference.isBlank()
-                ? skillName : skillName + "/" + reference;
+    public static String buildId(String skillName, String templateKey) {
+        return skillName + "/" + templateKey;
     }
 }

@@ -3,7 +3,6 @@ package com.kuoge.agentos.skill.ad;
 import com.kuoge.agentos.skill.AiSkill;
 import com.kuoge.agentos.skill.SkillContext;
 import com.kuoge.agentos.skill.SkillResult;
-import com.kuoge.agentos.skill.md.PromptTemplate;
 import com.kuoge.agentos.skill.md.SkillLibrary;
 
 import java.util.List;
@@ -44,10 +43,10 @@ public class ExperienceDistillSkill implements AiSkill<String, AdFactStore.Exper
     public SkillResult<AdFactStore.Experience> run(SkillContext ctx, String confirmedReview) {
         AdFactStore.Experience candidate = new AdFactStore.Experience(
                 "exp_" + UUID.randomUUID().toString().substring(0, 8),
-                wording("RULE_CANDIDATE.md", Map.of("review", confirmedReview),
+                wording("RULE_CANDIDATE", Map.of("review", confirmedReview),
                         "从复盘提炼的经验规则候选：" + confirmedReview),
                 "review:" + ctx.tenantId(),
-                wording("CONDITION_PLACEHOLDER.md", Map.of(), "适用条件待人工标注"),
+                wording("CONDITION_PLACEHOLDER", Map.of(), "适用条件待人工标注"),
                 false);   // 审核前一律不生效
         if (kaLine) {
             // KA：候选自动入库（仍未审核，生效需审核）
@@ -66,14 +65,13 @@ public class ExperienceDistillSkill implements AiSkill<String, AdFactStore.Exper
         return approved;
     }
 
-    /** 取文案：优先 md 模板渲染；库不可用 / 模板缺失 / 渲染失败时回退内置文案 */
-    private String wording(String reference, Map<String, ?> vars, String fallback) {
+    /** 取文案：优先契约库渲染；库不可用 / 模板缺失 / 渲染失败时回退内置文案 */
+    private String wording(String templateKey, Map<String, ?> vars, String fallback) {
         if (skillLibrary == null || !skillLibrary.contains(SKILL_NAME)) {
             return fallback;
         }
         try {
-            return PromptTemplate.render(
-                    skillLibrary.loadReference(SKILL_NAME, reference), vars).trim();
+            return skillLibrary.render(SKILL_NAME, templateKey, vars).trim();
         } catch (RuntimeException e) {
             return fallback;
         }

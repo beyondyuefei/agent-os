@@ -22,8 +22,8 @@ public class ReviewDraftSkill implements AiSkill<AttributionMapService.Observati
 
     /** 库中模板名（与 skills/ 目录下文件夹名一致） */
     static final String SKILL_NAME = "ad-review-draft";
-    /** 四段式格式规则引用（第三级，按需加载后并入提示词） */
-    static final String FORMAT_REFERENCE = "four-section-format.md";
+    /** 四段式格式规则模板键（contract.yaml templates.FORMAT，按需并入提示词） */
+    static final String FORMAT_REFERENCE = "FORMAT";
 
     private final LlmClient llmClient;
     private final SkillLibrary skillLibrary;
@@ -53,10 +53,10 @@ public class ReviewDraftSkill implements AiSkill<AttributionMapService.Observati
     private String buildPrompt(AttributionMapService.Observation obs) {
         Map<String, Object> vars = promptVars(obs);
         if (skillLibrary != null && skillLibrary.contains(SKILL_NAME)) {
-            StringBuilder prompt = new StringBuilder(skillLibrary.render(SKILL_NAME, vars));
-            if (skillLibrary.load(SKILL_NAME).references().contains(FORMAT_REFERENCE)) {
-                // 第三级按需：格式规则引用并入提示词
-                prompt.append("\n\n").append(skillLibrary.loadReference(SKILL_NAME, FORMAT_REFERENCE));
+            StringBuilder prompt = new StringBuilder(skillLibrary.render(SKILL_NAME, "BODY", vars));
+            if (skillLibrary.contract(SKILL_NAME).templates().containsKey(FORMAT_REFERENCE)) {
+                // 格式规则模板按需并入提示词
+                prompt.append("\n\n").append(skillLibrary.content(SKILL_NAME, FORMAT_REFERENCE));
             }
             return prompt.toString();
         }

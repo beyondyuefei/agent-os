@@ -12,10 +12,11 @@ import com.kuoge.agentos.delivery.BudgetLedger;
 import com.kuoge.agentos.delivery.DeliveryItemRepository;
 import com.kuoge.agentos.delivery.DeliveryItemStateMachine;
 import com.kuoge.agentos.api.SkillAdminService;
-import com.kuoge.agentos.infrastructure.persistence.JpaSkillOverrideStore;
+import com.kuoge.agentos.infrastructure.persistence.JpaSkillTemplateStore;
 import com.kuoge.agentos.infrastructure.persistence.repository.SkillTemplateRepository;
+import com.kuoge.agentos.infrastructure.persistence.repository.SkillTemplateVersionRepository;
 import com.kuoge.agentos.skill.md.SkillLibrary;
-import com.kuoge.agentos.skill.md.SkillOverrideStore;
+import com.kuoge.agentos.skill.md.SkillTemplateStore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,27 +48,30 @@ public class AdsFeatureConfig {
         return new BudgetLedger();
     }
 
-    /** SKILL.md 提示词库（三级渐进加载；数据库覆盖优先于 classpath 默认模板） */
+    /** Skill 契约库（contract.yaml 常驻；生效内容读数据库，缺省回退契约默认值） */
     @Bean
-    public SkillLibrary skillLibrary(SkillOverrideStore skillOverrideStore) {
-        return new SkillLibrary(skillOverrideStore);
+    public SkillLibrary skillLibrary(SkillTemplateStore skillTemplateStore) {
+        return new SkillLibrary(skillTemplateStore);
     }
 
     @Bean
-    public SkillOverrideStore skillOverrideStore(SkillTemplateRepository repository) {
-        return new JpaSkillOverrideStore(repository);
+    public SkillTemplateStore skillTemplateStore(SkillTemplateRepository repository) {
+        return new JpaSkillTemplateStore(repository);
     }
 
     @Bean
     public SkillAdminService skillAdminService(SkillLibrary skillLibrary,
-                                               SkillOverrideStore skillOverrideStore) {
-        return new SkillAdminService(skillLibrary, skillOverrideStore);
+                                               SkillTemplateStore skillTemplateStore,
+                                               SkillTemplateVersionRepository versionRepository) {
+        return new SkillAdminService(skillLibrary, skillTemplateStore, versionRepository);
     }
 
-    /** 启动种子：jar 内 md 模板初始化入库（已有运营覆盖的 skill 不冲掉） */
+    /** 启动种子：contract.yaml 默认内容初始化入库（已有运营发布的 skill 不冲掉） */
     @Bean
-    public SkillTemplateBootstrap skillTemplateBootstrap(SkillTemplateRepository repository) {
-        return new SkillTemplateBootstrap(repository);
+    public SkillTemplateBootstrap skillTemplateBootstrap(
+            SkillTemplateRepository templateRepository,
+            SkillTemplateVersionRepository versionRepository) {
+        return new SkillTemplateBootstrap(templateRepository, versionRepository);
     }
 
     @Bean

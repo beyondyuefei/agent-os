@@ -1,0 +1,29 @@
+name: ad-evolve-suggest
+description: 效果进化建议的诊断话术模板库。诊断判断逻辑（阈值计算、规则命中）保留在 Java 代码中；给人看的事实描述、建议话术、实验设计文案全部外部化于此，运营可经评审流调整措辞而不改代码、不发版。
+version: all
+form: ai-skill
+risk: READ
+plans: all
+templates:
+  RULE_CTR_LOW:
+    variables:
+      ctrLow: { type: number, required: true, desc: CTR 阈值 }
+    default: "CTR 低于阈值 {{ctrLow}}，建议更换素材或调整人群定向"
+  RULE_CLICK_NO_CONVERT:
+    variables: {}
+    default: "点击无转化，建议检查落地页与商品价格竞争力"
+  RULE_CROSS_PRODUCT:
+    variables: {}
+    default: "假设：排序结构导致跨品购买，建议 A/B 实验验证排序调整"
+  FACT_CTR:
+    variables:
+      ctr: { type: string, required: true, desc: 格式化后的 CTR 值 }
+      ctrLow: { type: number, required: true, desc: CTR 阈值 }
+    default: "CTR={{ctr}}（阈值 {{ctrLow}}）"
+  FACT_CROSS_PRODUCT:
+    variables:
+      count: { type: number, required: true, desc: 跨品成交单数 }
+    default: "跨品成交 {{count}} 单：入口商品与购买商品不一致"
+  EXPERIMENT_DESIGN:
+    variables: {}
+    default: "A/B: 对照组维持现排序，实验组将高毛利品前置，观察窗口 7 天"

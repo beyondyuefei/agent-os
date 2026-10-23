@@ -13,7 +13,6 @@
   header h1 { font-size: 17px; font-weight: 600; }
   header .sub { font-size: 12px; color: #8f959e; }
   main { flex: 1; display: flex; overflow: hidden; }
-  /* 左栏：模板列表 */
   .list { width: 300px; background: #fff; border-right: 1px solid #e5e6eb; overflow-y: auto; }
   .skill-item { padding: 14px 18px; border-bottom: 1px solid #f2f3f5; cursor: pointer; }
   .skill-item:hover { background: #f7f8fa; }
@@ -22,20 +21,24 @@
   .skill-item .desc { font-size: 12px; color: #646a73; margin-top: 4px; line-height: 1.5;
                       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .skill-item .meta { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
-  /* 徽章 */
   .badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: #f2f3f5; color: #646a73; }
   .badge.ops { background: #fff1e8; color: #d46b08; }
   .badge.seed { background: #e8ffea; color: #00b42a; }
+  .badge.draft { background: #f3e8ff; color: #722ed1; }
   .badge.ver { background: #e8f3ff; color: #165dff; }
-  /* 右栏：编辑 */
   .editor { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-  .tabs { background: #fff; border-bottom: 1px solid #e5e6eb; padding: 0 20px; display: flex; gap: 4px; }
+  .tabs { background: #fff; border-bottom: 1px solid #e5e6eb; padding: 0 20px; display: flex; gap: 4px; overflow-x: auto; }
   .tab { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent;
-         font-family: ui-monospace, monospace; display: flex; align-items: center; gap: 6px; }
+         font-family: ui-monospace, monospace; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
   .tab:hover { color: #165dff; }
   .tab.active { border-bottom-color: #165dff; color: #165dff; font-weight: 600; }
   .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: #d4d6da; }
   .tab .dot.ops { background: #d46b08; }
+  .tab .dot.draft { background: #722ed1; }
+  .contract-bar { background: #f7f8fa; border-bottom: 1px solid #e5e6eb; padding: 8px 20px;
+                  font-size: 12px; color: #646a73; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .var-chip { background: #fff; border: 1px solid #e5e6eb; border-radius: 4px; padding: 1px 8px;
+              font-family: ui-monospace, monospace; }
   .editor-body { flex: 1; padding: 16px 20px; overflow: hidden; display: flex; flex-direction: column; }
   textarea { flex: 1; width: 100%; resize: none; border: 1px solid #e5e6eb; border-radius: 6px;
              padding: 12px; font-family: ui-monospace, Menlo, monospace; font-size: 13px;
@@ -46,118 +49,172 @@
   button { border: 1px solid #e5e6eb; background: #fff; border-radius: 6px; padding: 7px 16px;
            font-size: 13px; cursor: pointer; }
   button.primary { background: #165dff; border-color: #165dff; color: #fff; }
-  button.danger { color: #f53f3f; }
   button:disabled { opacity: .45; cursor: not-allowed; }
   .toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
            background: #1f2329; color: #fff; padding: 8px 18px; border-radius: 6px;
-           font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+           font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 10; }
   .empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #8f959e; font-size: 14px; }
+  /* 历史抽屉 */
+  .history { position: fixed; top: 0; right: 0; width: 460px; height: 100vh; background: #fff;
+             border-left: 1px solid #e5e6eb; box-shadow: -4px 0 16px rgba(0,0,0,.06);
+             padding: 20px; overflow-y: auto; display: none; z-index: 5; }
+  .history.open { display: block; }
+  .history h3 { font-size: 15px; margin-bottom: 12px; }
+  .ver-item { border: 1px solid #f2f3f5; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .ver-item .head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .ver-item .preview { font-size: 12px; color: #646a73; margin-top: 6px; font-family: ui-monospace, monospace;
+                       word-break: break-all; }
+  .ver-item .ops { margin-top: 8px; }
+  .ver-item .ops button { font-size: 12px; padding: 4px 10px; }
+  .history .close { float: right; border: none; font-size: 16px; }
 </style>
 </head>
 <body>
 <header>
   <h1>Skill 模板管理</h1>
-  <span class="sub">数据库为运行时唯一数据源 · 保存即生效 · 回退即恢复默认</span>
+  <span class="sub">草稿 → 评审单号发布 → 快照可回滚 · 契约变量未声明将被拦截</span>
 </header>
 <main>
   <div class="list" id="skillList"></div>
   <div class="editor" id="editor"><div class="empty">← 选择左侧模板开始编辑</div></div>
 </main>
+<div class="history" id="history"></div>
 <div class="toast" id="toast"></div>
 <script>
 const API = '/api/admin/skills';
-let skills = [], current = null, currentRef = null, detail = null;
+let skills = [], current = null, currentKey = null, detail = null;
 
 async function api(path, opts) {
   const res = await fetch(API + path, opts);
-  if (!res.ok) throw new Error((await res.text()) || res.statusText);
+  if (!res.ok) {
+    let msg = res.statusText;
+    try { msg = (await res.json()).error || msg; } catch { try { msg = await res.text() || msg; } catch {} }
+    throw new Error(msg);
+  }
   return res.status === 204 ? null : res.json();
 }
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.opacity = 1;
-  setTimeout(() => t.style.opacity = 0, 2200);
+  setTimeout(() => t.style.opacity = 0, 2600);
 }
 function sourceLabel(s) {
-  return { SEED: '默认值（随版本评审发布）', DB_OPS: '运营已修改', CLASSPATH: '无记录·读取包内兜底' }[s] || s;
+  return { SEED: '默认值（契约种子）', DB_OPS: '运营已发布', CONTRACT_DEFAULT: '无记录·契约兜底', DRAFT: '编辑中草稿' }[s] || s;
 }
 
 async function loadList() {
   skills = await api('');
-  const el = document.getElementById('skillList');
-  el.innerHTML = skills.map(s => `
+  document.getElementById('skillList').innerHTML = skills.map(s => `
     <div class="skill-item ${current === s.metadata.name ? 'active' : ''}"
          onclick="selectSkill('${s.metadata.name}')">
       <div class="name">${s.metadata.name}</div>
       <div class="desc">${s.metadata.description}</div>
       <div class="meta">
         <span class="badge ver">${s.metadata.version}</span>
-        <span class="badge ${s.bodyModified ? 'ops' : 'seed'}">${s.bodyModified ? '运营已改' : '默认'}</span>
-        ${s.modifiedReferences.length ? `<span class="badge ops">${s.modifiedReferences.length} 个引用已改</span>` : ''}
+        ${s.modifiedTemplates.length
+          ? `<span class="badge ops">${s.modifiedTemplates.length} 个模板已发布修改</span>`
+          : '<span class="badge seed">默认</span>'}
       </div>
     </div>`).join('');
 }
 
 async function selectSkill(name) {
-  current = name; currentRef = null;
+  current = name; currentKey = null;
   detail = await api('/' + name);
-  renderEditor();
-  loadList();
+  if (detail.templates.length) currentKey = detail.templates[0].key;
+  renderEditor(); loadList();
 }
 
+function templateOf(key) { return detail.templates.find(t => t.key === key); }
+
+async function switchTab(key) { currentKey = key; renderEditor(); }
+
 function renderEditor() {
-  const refs = detail.references;
-  const modified = new Set(detail.modifiedReferences);
-  const tabs = [`<div class="tab ${currentRef === null ? 'active' : ''}" onclick="switchTab(null)">
-      <span class="dot ${detail.bodyModified ? 'ops' : ''}"></span>SKILL.md</div>`]
-    .concat(refs.map(r => `<div class="tab ${currentRef === r ? 'active' : ''}" onclick="switchTab('${r}')">
-      <span class="dot ${modified.has(r) ? 'ops' : ''}"></span>${r}</div>`));
+  const tabs = detail.templates.map(t => `
+    <div class="tab ${currentKey === t.key ? 'active' : ''}" onclick="switchTab('${t.key}')">
+      <span class="dot ${t.hasDraft ? 'draft' : (t.source === 'DB_OPS' ? 'ops' : '')}"></span>${t.key}
+    </div>`);
+  const tpl = templateOf(currentKey);
+  const vars = Object.entries(tpl.variables || {})
+    .map(([k, v]) => `<span class="var-chip">{{${k}}}${v.required ? ' *' : ''}</span>`).join(' ');
   document.getElementById('editor').innerHTML = `
     <div class="tabs">${tabs.join('')}</div>
+    <div class="contract-bar">契约变量（* = 渲染必填）：${vars || '无'}<span style="flex:1"></span>引用未声明变量将在保存时被拦截</div>
     <div class="editor-body">
       <textarea id="content" spellcheck="false"></textarea>
       <div class="toolbar">
         <span class="src" id="srcLabel"></span>
-        <button class="danger" id="btnRevert" onclick="revert()">回退默认</button>
-        <button class="primary" onclick="save()">保存生效</button>
+        <button onclick="showHistory()">历史版本</button>
+        <button id="btnDiscard" onclick="discardDraft()">丢弃草稿</button>
+        <button id="btnSave" onclick="saveDraft()">保存草稿</button>
+        <button class="primary" onclick="publish()">发布（需评审单号）</button>
       </div>
     </div>`;
-  loadContent();
+  loadDraft();
 }
 
-async function switchTab(ref) { currentRef = ref; renderEditor(); }
-
-async function loadContent() {
-  const view = await api('/' + current + '/content' + (currentRef ? '?ref=' + currentRef : ''));
+async function loadDraft() {
+  const view = await api(`/${current}/templates/${currentKey}/draft`);
   document.getElementById('content').value = view.content;
-  const isOps = view.source === 'DB_OPS';
-  document.getElementById('srcLabel').textContent = '来源：' + sourceLabel(view.source);
-  document.getElementById('btnRevert').disabled = !isOps;
+  document.getElementById('srcLabel').textContent = '当前内容来源：' + sourceLabel(view.source);
+  document.getElementById('btnDiscard').disabled = view.source !== 'DRAFT';
 }
 
-async function save() {
-  const content = document.getElementById('content').value;
-  let body = content;
-  if (currentRef === null && !content.trimStart().startsWith('---')) {
-    // body 编辑展示的是解析后正文，保存时包回 frontmatter
-    const m = detail.metadata;
-    body = `---\nname: ${m.name}\ndescription: ${m.description}\nversion: ${m.version}\nform: ${m.form}\nrisk: ${m.risk}\nplans: ${m.plans}\n---\n\n${content}`;
-  }
+async function saveDraft() {
   try {
-    await api('/' + current + '/content' + (currentRef ? '?ref=' + currentRef : '') + '&updatedBy=ops-panel',
-      { method: 'PUT', body });
-    toast('已保存并生效');
-    detail = await api('/' + current);
-    renderEditor(); loadList();
-  } catch (e) { toast('保存失败：' + e.message); }
+    await api(`/${current}/templates/${currentKey}/draft?updatedBy=ops-panel`,
+      { method: 'PUT', headers: { 'Content-Type': 'text/plain' }, body: document.getElementById('content').value });
+    toast('草稿已保存');
+    detail = await api('/' + current); renderEditor(); loadList();
+  } catch (e) { toast('保存被拦截：' + e.message); }
 }
 
-async function revert() {
-  if (!confirm('确认回退到默认模板？当前修改将被删除。')) return;
-  await api('/' + current + '/content' + (currentRef ? '?ref=' + currentRef : ''), { method: 'DELETE' });
-  toast('已回退默认');
-  detail = await api('/' + current);
-  renderEditor(); loadList();
+async function publish() {
+  const reviewRef = prompt('请输入评审单号（必填，如 FEISHU-2026-1023-01）：');
+  if (reviewRef === null) return;
+  if (!reviewRef.trim()) { toast('评审单号不能为空'); return; }
+  try {
+    await api(`/${current}/templates/${currentKey}/publish?reviewRef=${encodeURIComponent(reviewRef)}&updatedBy=ops-panel`,
+      { method: 'POST' });
+    toast('已发布生效');
+    detail = await api('/' + current); renderEditor(); loadList();
+  } catch (e) { toast('发布失败：' + e.message); }
+}
+
+async function discardDraft() {
+  if (!confirm('确认丢弃当前草稿？')) return;
+  await api(`/${current}/templates/${currentKey}/draft`, { method: 'DELETE' });
+  toast('草稿已丢弃');
+  detail = await api('/' + current); renderEditor();
+}
+
+async function showHistory() {
+  const list = await api(`/${current}/templates/${currentKey}/history`);
+  const el = document.getElementById('history');
+  el.innerHTML = `<button class="close" onclick="document.getElementById('history').classList.remove('open')">✕</button>
+    <h3>版本历史 · ${currentKey}</h3>` + list.map(v => `
+    <div class="ver-item">
+      <div class="head">
+        <b>v${v.versionNo}</b>
+        <span class="badge ${v.status === 'DRAFT' ? 'draft' : 'seed'}">${v.status}</span>
+        <span style="color:#8f959e;font-size:12px">${v.updatedBy || ''} · ${v.reviewRef || ''}</span>
+      </div>
+      <div class="preview">${v.contentPreview}</div>
+      ${v.status === 'PUBLISHED' ? `<div class="ops"><button onclick="rollback(${v.versionNo})">回滚到此版本</button></div>` : ''}
+    </div>`).join('');
+  el.classList.add('open');
+}
+
+async function rollback(versionNo) {
+  const reviewRef = prompt(`回滚到 v${versionNo}，请输入评审单号：`);
+  if (!reviewRef || !reviewRef.trim()) { toast('评审单号不能为空'); return; }
+  try {
+    await api(`/${current}/templates/${currentKey}/rollback?versionNo=${versionNo}&reviewRef=${encodeURIComponent(reviewRef)}&updatedBy=ops-panel`,
+      { method: 'POST' });
+    toast('已回滚并生效');
+    document.getElementById('history').classList.remove('open');
+    detail = await api('/' + current); renderEditor(); loadList();
+  } catch (e) { toast('回滚失败：' + e.message); }
 }
 
 loadList().catch(e => toast('加载失败：' + e.message));

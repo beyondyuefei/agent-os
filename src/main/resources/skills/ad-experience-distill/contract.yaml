@@ -1,0 +1,14 @@
+name: ad-experience-distill
+description: 经验沉淀文案模板库。经验候选的入库逻辑（候选级 / 审核入库级、审核生效门禁）保留在 Java 代码中；候选规则与适用条件的措辞外部化于此，运营可经评审流调整。
+version: all
+form: ai-skill
+risk: WRITE_LOW_RISK
+plans: all
+templates:
+  RULE_CANDIDATE:
+    variables:
+      review: { type: string, required: true, desc: 复盘确认结论 }
+    default: "从复盘提炼的经验规则候选：{{review}}"
+  CONDITION_PLACEHOLDER:
+    variables: {}
+    default: "适用条件待人工标注"

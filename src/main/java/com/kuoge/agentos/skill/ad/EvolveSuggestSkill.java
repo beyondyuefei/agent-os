@@ -5,7 +5,6 @@ import com.kuoge.agentos.capability.PolicyProfile;
 import com.kuoge.agentos.skill.AiSkill;
 import com.kuoge.agentos.skill.SkillContext;
 import com.kuoge.agentos.skill.SkillResult;
-import com.kuoge.agentos.skill.md.PromptTemplate;
 import com.kuoge.agentos.skill.md.SkillLibrary;
 
 import java.util.ArrayList;
@@ -63,15 +62,15 @@ public class EvolveSuggestSkill implements AiSkill<AttributionMapService.Observa
     }
 
     /**
-     * 取诊断话术：优先 md 模板渲染；库不可用 / 模板缺失 / 渲染失败时回退内置文案。
+     * 取诊断话术：优先契约库渲染（数据库发布内容 / 契约默认值）；
+     * 库不可用 / 模板缺失 / 渲染失败时回退内置文案。
      */
-    private String wording(String reference, Map<String, ?> vars, String fallback) {
+    private String wording(String templateKey, Map<String, ?> vars, String fallback) {
         if (skillLibrary == null || !skillLibrary.contains(SKILL_NAME)) {
             return fallback;
         }
         try {
-            return PromptTemplate.render(
-                    skillLibrary.loadReference(SKILL_NAME, reference), vars).trim();
+            return skillLibrary.render(SKILL_NAME, templateKey, vars).trim();
         } catch (RuntimeException e) {
             return fallback;
         }
@@ -92,17 +91,17 @@ public class EvolveSuggestSkill implements AiSkill<AttributionMapService.Observa
         double ctrLow = ((Number) policy.thresholds().getOrDefault("ctr_low", 0.02)).doubleValue();
         double ctr = obs.impressions() == 0 ? 0 : (double) obs.clicks() / obs.impressions();
         String ctrFormatted = String.format("%.4f", ctr);
-        facts.add(wording("FACT_CTR.md",
+        facts.add(wording("FACT_CTR",
                 Map.of("ctr", ctrFormatted, "ctrLow", ctrLow),
                 "CTR=" + ctrFormatted + "（阈值 " + ctrLow + "）"));
         if (obs.impressions() > 0 && ctr < ctrLow) {
-            suggestions.add(wording("RULE_CTR_LOW.md",
+            suggestions.add(wording("RULE_CTR_LOW",
                     Map.of("ctrLow", ctrLow),
                     "CTR 低于阈值，建议更换素材或调整人群定向"));
             ruleRefs.add("RULE_CTR_LOW");
         }
         if (obs.clicks() > 0 && obs.attributedOrders() == 0) {
-            suggestions.add(wording("RULE_CLICK_NO_CONVERT.md",
+            suggestions.add(wording("RULE_CLICK_NO_CONVERT",
                     Map.of(),
                     "点击无转化，建议检查落地页与商品价格竞争力"));
             ruleRefs.add("RULE_CLICK_NO_CONVERT");
@@ -113,15 +112,15 @@ public class EvolveSuggestSkill implements AiSkill<AttributionMapService.Observa
         if (ka) {
             // KA 版：多维诊断与原因假设（素材 / 商品 / 排序 / 人群），输出实验设计
             if (obs.crossProductOrders() > 0) {
-                facts.add(wording("FACT_CROSS_PRODUCT.md",
+                facts.add(wording("FACT_CROSS_PRODUCT",
                         Map.of("count", obs.crossProductOrders()),
                         "跨品成交 " + obs.crossProductOrders() + " 单：入口商品与购买商品不一致"));
-                suggestions.add(wording("RULE_CROSS_PRODUCT.md",
+                suggestions.add(wording("RULE_CROSS_PRODUCT",
                         Map.of(),
                         "假设：排序结构导致跨品购买，建议 A/B 实验验证排序调整"));
                 ruleRefs.add("RULE_CROSS_PRODUCT");
             }
-            experimentDesign = wording("EXPERIMENT_DESIGN.md",
+            experimentDesign = wording("EXPERIMENT_DESIGN",
                     Map.of(),
                     "A/B: 对照组维持现排序，实验组将高毛利品前置，观察窗口 7 天");
         }
