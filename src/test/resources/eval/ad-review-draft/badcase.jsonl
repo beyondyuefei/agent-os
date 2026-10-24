@@ -1,0 +1,4 @@
+{"name":"badcase-空证据","spendCents":10000,"impressions":3000,"clicks":80,"attributedOrders":0,"crossProductOrders":0,"unknownOrders":0,"evidenceRefs":[],"gaps":["no_platform_fact"],"expect":{"degraded":true}}
+{"name":"badcase-零曝光","spendCents":0,"impressions":0,"clicks":0,"attributedOrders":0,"crossProductOrders":0,"unknownOrders":0,"evidenceRefs":["ad_fact_platform:ad_201@2026W43"],"gaps":[],"expect":{"degraded":false}}
+{"name":"badcase-全unknown","spendCents":45000,"impressions":9000,"clicks":450,"attributedOrders":0,"crossProductOrders":0,"unknownOrders":7,"evidenceRefs":["ad_fact_platform:ad_202@2026W43"],"gaps":["attribution"],"expect":{"degraded":false}}
+{"name":"badcase-超大数值","spendCents":900000000000,"impressions":99999999999,"clicks":123456789,"attributedOrders":987654,"crossProductOrders":12345,"unknownOrders":54321,"evidenceRefs":["ad_fact_platform:ad_203@2026W43"],"gaps":[],"expect":{"degraded":false}}

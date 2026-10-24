@@ -11,3 +11,6 @@ target/
 
 # OS files
 .DS_Store
+
+# H2 本地文件库（agentos 持久化数据）
+data/

@@ -9,7 +9,7 @@ import com.kuoge.agentos.channel.CreationStatus;
 import com.kuoge.agentos.channel.mock.MockAdChannelAdapter;
 import com.kuoge.agentos.delivery.DeliveryItem;
 import com.kuoge.agentos.delivery.DeliveryItemAction;
-import com.kuoge.agentos.delivery.DeliveryItemRepository;
+import com.kuoge.agentos.delivery.InMemoryDeliveryItemStore;
 import com.kuoge.agentos.delivery.DeliveryItemStateMachine;
 import com.kuoge.agentos.delivery.DeliveryItemStatus;
 import com.kuoge.agentos.skill.SkillContext;
@@ -33,7 +33,7 @@ class AdCreateExecuteServiceTest {
 
     private CapabilityStore store;
     private MockAdChannelAdapter channel;
-    private DeliveryItemRepository repository;
+    private InMemoryDeliveryItemStore repository;
     private DeliveryItemStateMachine sm;
     private AdCreateExecuteService service;
     private String tenant;
@@ -43,23 +43,29 @@ class AdCreateExecuteServiceTest {
         store = CapabilityTestFixtures.storeWithProAndKa();
         tenant = CapabilityTestFixtures.TENANT_KA;   // KA 档 AUTO_LOW_RISK，风险动作放行
         channel = new MockAdChannelAdapter();
-        repository = new DeliveryItemRepository();
+        repository = new InMemoryDeliveryItemStore();
         sm = new DeliveryItemStateMachine();
         CapabilityGateway gateway = new CapabilityGateway(store,
                 (tenantId, itemId) -> repository.findById(itemId)
                         .map(DeliveryItem::approvedAndLatest).orElse(false),
                 CapabilityTestFixtures.noopNotifier());
-        service = new AdCreateExecuteService(gateway, channel, repository, sm);
+        service = new AdCreateExecuteService(gateway, channel, repository, sm,
+                new PreflightCheckService(repository, store));
     }
 
     /** 组装 → 送审 → 批准，得到已批准投放项 */
     private DeliveryItem approvedItem() {
-        com.kuoge.agentos.delivery.BudgetLedger ledger = new com.kuoge.agentos.delivery.BudgetLedger();
+        return approvedItem(10_000);
+    }
+
+    /** 组装 → 送审 → 批准，得到已批准投放项（可指定预算金额） */
+    private DeliveryItem approvedItem(long budgetAmount) {
+        com.kuoge.agentos.delivery.BudgetLedger ledger = new com.kuoge.agentos.delivery.InMemoryBudgetLedger();
         ledger.openAccount(tenant, 10_000_000);
         ItemAssembleService assemble = new ItemAssembleService(repository,
                 ledger, collectionId -> true);
         DeliveryItem item = assemble.execute(SkillContext.of(tenant),
-                new ItemAssembleService.Input("img_1", "p_1", "plan_1", "col_1", 10_000));
+                new ItemAssembleService.Input("img_1", "p_1", "plan_1", "col_1", budgetAmount));
         sm.transit(item, DeliveryItemAction.SUBMIT, null);
         sm.transit(item, DeliveryItemAction.APPROVE, null);
         repository.save(item);
@@ -144,5 +150,18 @@ class AdCreateExecuteServiceTest {
                 () -> service.execute(SkillContext.of(tenant), item.getDeliveryItemId()));
         assertTrue(ex.getMessage().contains("AUTH_002"));
         assertEquals(0, channel.platformSubmissionCount(), "网关拒绝后不得触达渠道");
+    }
+
+    /** 投前检查集 B 不过 → 阻断且不触达渠道（Mock 通道提交计数不变） */
+    @Test
+    void preflightBFailed_createBlocked_channelUntouched() {
+        // 预算金额为 0 → A4_QUOTA_VALID 不过；网关（套餐/批准/预算授权）仍放行
+        DeliveryItem item = approvedItem(0);
+        PreflightBFailedException ex = assertThrows(PreflightBFailedException.class,
+                () -> service.execute(SkillContext.of(tenant), item.getDeliveryItemId()));
+        assertTrue(ex.getMessage().startsWith("PREFLIGHT_B_FAILED"));
+        assertTrue(ex.failedCodes().contains("A4_QUOTA_VALID"));
+        assertEquals(0, channel.platformSubmissionCount(), "preflight 不过不得触达渠道");
+        assertEquals(DeliveryItemStatus.APPROVED, item.getStatus(), "preflight 不过状态不变");
     }
 }

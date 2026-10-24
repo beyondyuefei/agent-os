@@ -11,7 +11,7 @@ class BudgetLedgerTest {
 
     @Test
     void invariantHoldsThroughFullLifecycle() {
-        BudgetLedger ledger = new BudgetLedger();
+        BudgetLedger ledger = new InMemoryBudgetLedger();
         ledger.openAccount("t1", 100_000);
         assertTrue(ledger.assertInvariant("t1"));
 
@@ -37,7 +37,7 @@ class BudgetLedgerTest {
 
     @Test
     void insufficientBalance_reserveFails() {
-        BudgetLedger ledger = new BudgetLedger();
+        BudgetLedger ledger = new InMemoryBudgetLedger();
         ledger.openAccount("t1", 10_000);
         assertFalse(ledger.reserve("t1", 20_000));
         assertTrue(ledger.assertInvariant("t1"));
@@ -45,7 +45,7 @@ class BudgetLedgerTest {
 
     @Test
     void occupyMoreThanReserved_throws() {
-        BudgetLedger ledger = new BudgetLedger();
+        BudgetLedger ledger = new InMemoryBudgetLedger();
         ledger.openAccount("t1", 10_000);
         ledger.reserve("t1", 5_000);
         assertThrows(IllegalStateException.class, () -> ledger.occupyFromReserved("t1", 6_000));

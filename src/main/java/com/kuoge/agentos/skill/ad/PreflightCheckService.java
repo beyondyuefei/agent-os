@@ -2,7 +2,7 @@ package com.kuoge.agentos.skill.ad;
 
 import com.kuoge.agentos.capability.CapabilityStore;
 import com.kuoge.agentos.delivery.DeliveryItem;
-import com.kuoge.agentos.delivery.DeliveryItemRepository;
+import com.kuoge.agentos.delivery.DeliveryItemStore;
 import com.kuoge.agentos.skill.DomainService;
 import com.kuoge.agentos.skill.SkillContext;
 
@@ -28,10 +28,10 @@ public class PreflightCheckService implements DomainService<PreflightCheckServic
         }
     }
 
-    private final DeliveryItemRepository repository;
+    private final DeliveryItemStore repository;
     private final CapabilityStore capabilityStore;
 
-    public PreflightCheckService(DeliveryItemRepository repository, CapabilityStore capabilityStore) {
+    public PreflightCheckService(DeliveryItemStore repository, CapabilityStore capabilityStore) {
         this.repository = repository;
         this.capabilityStore = capabilityStore;
     }

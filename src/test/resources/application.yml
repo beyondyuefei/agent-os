@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: agent-os
+
+  datasource:
+    # 测试内存库：不落盘、不写 ./data，与 main 的 file 库隔离
+    url: jdbc:h2:mem:agentos-test;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+
+server:
+  port: 8080
+
+agentos:
+  feishu:
+    approval:
+      mock-mode: true
+      app-id: ${FEISHU_APP_ID:}
+      app-secret: ${FEISHU_APP_SECRET:}
+      approval-code: ${FEISHU_APPROVAL_CODE:}
+      approver-open-id: ${FEISHU_APPROVER_OPEN_ID:}
+      poll-interval-ms: 5000
+      max-poll-times: 60
+  crossborder:
+    base-url: ${CROSSBORDER_BASE_URL:https://test.admin.crossborder.com}
+    email: ${CROSSBORDER_EMAIL:}
+    password: ${CROSSBORDER_PASSWORD:}
+    tenant-id: ${CROSSBORDER_TENANT_ID:1}
+    site: ${CROSSBORDER_SITE:self_site}
+    enabled: ${CROSSBORDER_ENABLED:true}

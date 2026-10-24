@@ -15,6 +15,8 @@ public class DeliveryItem {
     private DeliveryItemStatus status;
     private int version;
     private String rejectReason;
+    /** 申报预算（分）：待补项母集合就绪后补齐快照时据此占用额度 */
+    private long budgetAmount;
     private ApprovedItemSnapshot approvedSnapshot;
     private String platformRequestId;
     private String platformAdId;
@@ -41,15 +43,35 @@ public class DeliveryItem {
     public DeliveryItemStatus getStatus() { return status; }
     public int getVersion() { return version; }
     public String getRejectReason() { return rejectReason; }
+    public long getBudgetAmount() { return budgetAmount; }
     public ApprovedItemSnapshot getApprovedSnapshot() { return approvedSnapshot; }
     public String getPlatformRequestId() { return platformRequestId; }
     public String getPlatformAdId() { return platformAdId; }
 
     void setStatus(DeliveryItemStatus status) { this.status = status; }
-    void setRejectReason(String rejectReason) { this.rejectReason = rejectReason; }
+    /** 送审阻断 / 负责人退回等原因记录（编排层与状态机均可写） */
+    public void setRejectReason(String rejectReason) { this.rejectReason = rejectReason; }
+    public void setBudgetAmount(long budgetAmount) { this.budgetAmount = budgetAmount; }
     public void setApprovedSnapshot(ApprovedItemSnapshot snapshot) { this.approvedSnapshot = snapshot; }
     public void setPlatformRequestId(String platformRequestId) { this.platformRequestId = platformRequestId; }
     public void setPlatformAdId(String platformAdId) { this.platformAdId = platformAdId; }
+
+    /** 持久层重建用：绕过状态机全字段还原（仅 JPA 实现调用，业务代码不得使用） */
+    public static DeliveryItem restore(String deliveryItemId, String tenantId, String imageId,
+                                       String productId, String planId, String collectionId,
+                                       DeliveryItemStatus status, int version, String rejectReason,
+                                       long budgetAmount, ApprovedItemSnapshot approvedSnapshot,
+                                       String platformRequestId, String platformAdId) {
+        DeliveryItem item = new DeliveryItem(deliveryItemId, tenantId, imageId,
+                productId, planId, collectionId, status);
+        item.version = version;
+        item.rejectReason = rejectReason;
+        item.budgetAmount = budgetAmount;
+        item.approvedSnapshot = approvedSnapshot;
+        item.platformRequestId = platformRequestId;
+        item.platformAdId = platformAdId;
+        return item;
+    }
 
     /** 修订产生新版本，旧批准快照随之失效 */
     void bumpVersion() {

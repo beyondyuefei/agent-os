@@ -7,7 +7,7 @@ import com.kuoge.agentos.channel.AdChannelAdapter;
 import com.kuoge.agentos.channel.AdCreateReceipt;
 import com.kuoge.agentos.delivery.DeliveryItem;
 import com.kuoge.agentos.delivery.DeliveryItemAction;
-import com.kuoge.agentos.delivery.DeliveryItemRepository;
+import com.kuoge.agentos.delivery.DeliveryItemStore;
 import com.kuoge.agentos.delivery.DeliveryItemStateMachine;
 import com.kuoge.agentos.skill.DomainService;
 import com.kuoge.agentos.skill.SkillContext;
@@ -37,20 +37,23 @@ public class AdCreateExecuteService implements DomainService<String, AdCreateExe
 
     private final CapabilityGateway gateway;
     private final AdChannelAdapter channelAdapter;
-    private final DeliveryItemRepository repository;
+    private final DeliveryItemStore repository;
     private final DeliveryItemStateMachine stateMachine;
+    private final PreflightCheckService preflightCheckService;
     /** 幂等键 → 已成功回执 */
     private final Map<String, Output> successReceipts = new ConcurrentHashMap<>();
     /** 幂等键 → 处理中（并发去重） */
     private final Map<String, Boolean> inFlight = new ConcurrentHashMap<>();
 
     public AdCreateExecuteService(CapabilityGateway gateway, AdChannelAdapter channelAdapter,
-                                  DeliveryItemRepository repository,
-                                  DeliveryItemStateMachine stateMachine) {
+                                  DeliveryItemStore repository,
+                                  DeliveryItemStateMachine stateMachine,
+                                  PreflightCheckService preflightCheckService) {
         this.gateway = gateway;
         this.channelAdapter = channelAdapter;
         this.repository = repository;
         this.stateMachine = stateMachine;
+        this.preflightCheckService = preflightCheckService;
     }
 
     @Override
@@ -62,6 +65,17 @@ public class AdCreateExecuteService implements DomainService<String, AdCreateExe
                 "AD_CREATE", deliveryItemId, java.util.List.of());
         if (decision.rejected()) {
             throw new GatewayRejectedException(decision.rejectCode().name());
+        }
+        // 1.5 投前检查集 B（创建前置）：B3 五项重检与网关判定重叠是方案本意——
+        // 网关是门禁（放行/拒绝），preflight 出结构化报告（逐项 code），两者分工不合并；
+        // 不过则阻断且不触达渠道
+        PreflightCheckService.Report report = preflightCheckService.execute(ctx,
+                new PreflightCheckService.Input(deliveryItemId, PreflightCheckService.CheckSet.B));
+        if (!report.pass()) {
+            throw new PreflightBFailedException(report.checks().stream()
+                    .filter(c -> !c.pass())
+                    .map(PreflightCheckService.Check::code)
+                    .toList());
         }
         String idempotencyKey = idempotencyKey(item);
         // 2. 查重：同键同内容命中已成功回执 → 返回既有结果（idempotent_replay，非错误）

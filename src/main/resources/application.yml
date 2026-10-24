@@ -3,7 +3,8 @@ spring:
     name: agent-os
 
   datasource:
-    url: jdbc:h2:mem:agentos;DB_CLOSE_DELAY=-1;MODE=MySQL
+    # 本地文件库持久化（重启不丢）；AGENTOS_DB_PATH 可覆盖路径；测试用 src/test/resources/application.yml 的内存库
+    url: jdbc:h2:file:${AGENTOS_DB_PATH:./data/agentos};MODE=MySQL
     driver-class-name: org.h2.Driver
     username: sa
     password:

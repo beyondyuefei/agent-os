@@ -19,7 +19,7 @@ class ExperienceDistillSkillTest {
 
     @BeforeEach
     void setUp() {
-        factStore = new AdFactStore();
+        factStore = new InMemoryAdFactStore();
     }
 
     @Test

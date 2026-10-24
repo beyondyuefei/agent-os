@@ -17,7 +17,13 @@ public final class CapabilityTestFixtures {
 
     /** 初始化能力目录 + PRO/KA 两个套餐与绑定 */
     public static CapabilityStore storeWithProAndKa() {
-        CapabilityStore store = new CapabilityStore();
+        CapabilityStore store = new InMemoryCapabilityStore();
+        populate(store);
+        return store;
+    }
+
+    /** 向既有 store 填充标准测试数据（Spring 上下文测试复用同一装配） */
+    public static void populate(CapabilityStore store) {
         for (CapabilityCode c : CapabilityCode.values()) {
             store.saveCapability(new CapabilityDef(c.code(), c.name(), "投流", "ACTIVE"));
         }
@@ -60,7 +66,15 @@ public final class CapabilityTestFixtures {
 
         store.saveQuota(new QuotaProfile("QUOTA_STD", 100, 50, "standard"));
         store.saveQuota(new QuotaProfile("QUOTA_KA", 1000, 500, "premium"));
-        return store;
+    }
+
+    /** 为套餐补 ad.data.observe 绑定与带 cron 的策略（数据回流触发链测试用） */
+    public static void bindDataObserve(CapabilityStore store, String planCode, String cronExpr) {
+        String policyCode = "INGEST_" + planCode;
+        store.savePolicy(new PolicyProfile(policyCode, 1, AutonomyLevel.CONFIRM_THEN_ACT,
+                cronExpr, Map.of(), Map.of(), List.of("ad_fact_platform")));
+        store.saveBinding(new PlanCapabilityBinding(planCode, CapabilityCode.AD_DATA_OBSERVE.code(),
+                true, policyCode, 1, "ad-ingest", "1.x", "QUOTA_STD"));
     }
 
     public static RevocationNotifier noopNotifier() {

@@ -21,7 +21,7 @@ class ExperienceDistillExternalizationTest {
 
     @BeforeEach
     void setUp() {
-        factStore = new AdFactStore();
+        factStore = new InMemoryAdFactStore();
         library = new SkillLibrary();
     }
 

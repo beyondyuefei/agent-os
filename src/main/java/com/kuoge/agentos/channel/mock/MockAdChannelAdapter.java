@@ -36,6 +36,10 @@ public class MockAdChannelAdapter implements AdChannelAdapter {
     private final Map<String, String> requestAdIds = new ConcurrentHashMap<>();
     /** 平台侧提交计数（幂等验收：同快照并发触发，平台只应收到 1 次） */
     private final AtomicInteger platformSubmissions = new AtomicInteger(0);
+    /** 平台侧启停动作计数（断言启停指令真实触达平台） */
+    private final AtomicInteger enableCalls = new AtomicInteger(0);
+    private final AtomicInteger pauseCalls = new AtomicInteger(0);
+    private final AtomicInteger endCalls = new AtomicInteger(0);
     /** 平台侧花费（对账数据源）：platformAdId → spendCents */
     private final Map<String, Long> platformSpent = new ConcurrentHashMap<>();
     /** 注入的跨品订单：platformAdId → orders */
@@ -89,18 +93,26 @@ public class MockAdChannelAdapter implements AdChannelAdapter {
     }
 
     @Override
+    public String resolvePlatformAdId(String platformRequestId) {
+        return requestAdIds.get(platformRequestId);
+    }
+
+    @Override
     public void enable(AdMapping mapping) {
         requireCreated(mapping.platformAdId());
+        enableCalls.incrementAndGet();
     }
 
     @Override
     public void pause(AdMapping mapping) {
         requireCreated(mapping.platformAdId());
+        pauseCalls.incrementAndGet();
     }
 
     @Override
     public void end(AdMapping mapping) {
         requireCreated(mapping.platformAdId());
+        endCalls.incrementAndGet();
     }
 
     private void requireCreated(String platformAdId) {
@@ -139,6 +151,21 @@ public class MockAdChannelAdapter implements AdChannelAdapter {
     /** 平台侧累计提交次数（幂等验收口径：系统边界） */
     public int platformSubmissionCount() {
         return platformSubmissions.get();
+    }
+
+    /** 平台侧累计 enable 调用次数 */
+    public int enableCallCount() {
+        return enableCalls.get();
+    }
+
+    /** 平台侧累计 pause 调用次数 */
+    public int pauseCallCount() {
+        return pauseCalls.get();
+    }
+
+    /** 平台侧累计 end 调用次数 */
+    public int endCallCount() {
+        return endCalls.get();
     }
 
     /** 平台侧累计花费（对账数据源） */

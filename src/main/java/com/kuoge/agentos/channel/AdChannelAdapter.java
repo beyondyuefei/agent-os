@@ -17,6 +17,11 @@ public interface AdChannelAdapter {
     /** 幂等反查：创建状态未知时确认原请求是否已创建 */
     CreationStatus getCreationStatus(String platformRequestId);
 
+    /** 反查确认已创建时取回平台广告 ID；通道不回传时返回 null */
+    default String resolvePlatformAdId(String platformRequestId) {
+        return null;
+    }
+
     /** 启用（风险动作，停止类独立权限项之外） */
     void enable(AdMapping mapping);
 

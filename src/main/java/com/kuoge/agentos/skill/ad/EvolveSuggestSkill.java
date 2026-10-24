@@ -61,6 +61,15 @@ public class EvolveSuggestSkill implements AiSkill<AttributionMapService.Observa
         return versionLine;
     }
 
+    /** 事实行挂证据标注进 facts；快照无证据指针（映射不上）时移入 limits */
+    private static void addFact(List<String> facts, List<String> limits, String text, String evidenceTag) {
+        if (evidenceTag == null) {
+            limits.add(text + "（无证据指针，移入限制）");
+        } else {
+            facts.add(text + evidenceTag);
+        }
+    }
+
     /**
      * 取诊断话术：优先契约库渲染（数据库发布内容 / 契约默认值）；
      * 库不可用 / 模板缺失 / 渲染失败时回退内置文案。
@@ -85,15 +94,21 @@ public class EvolveSuggestSkill implements AiSkill<AttributionMapService.Observa
         List<String> facts = new ArrayList<>();
         List<String> suggestions = new ArrayList<>();
         List<String> ruleRefs = new ArrayList<>();
-        List<String> limits = List.of("数据范围: " + String.join(", ", policy.dataScope()));
+        List<String> limits = new ArrayList<>(List.of("数据范围: " + String.join(", ", policy.dataScope())));
+
+        // PostReasoning 证据指针校验（方案「幻觉校验」）：facts 每行必须能映射到
+        // Observation.evidenceRefs —— 以简洁形式在行尾附证据标注；快照无证据指针时
+        // 映射不上，事实行移入 limits，不产出无指针结论（验收口径：无指针结论比例为零）
+        String evidenceTag = obs.evidenceRefs().isEmpty()
+                ? null : "（证据: " + String.join(", ", obs.evidenceRefs()) + "）";
 
         // 诊断深度由 policy.thresholds 决定（规则模板：CTR < 阈值、点击 N 小时无转化）
         double ctrLow = ((Number) policy.thresholds().getOrDefault("ctr_low", 0.02)).doubleValue();
         double ctr = obs.impressions() == 0 ? 0 : (double) obs.clicks() / obs.impressions();
         String ctrFormatted = String.format("%.4f", ctr);
-        facts.add(wording("FACT_CTR",
+        addFact(facts, limits, wording("FACT_CTR",
                 Map.of("ctr", ctrFormatted, "ctrLow", ctrLow),
-                "CTR=" + ctrFormatted + "（阈值 " + ctrLow + "）"));
+                "CTR=" + ctrFormatted + "（阈值 " + ctrLow + "）"), evidenceTag);
         if (obs.impressions() > 0 && ctr < ctrLow) {
             suggestions.add(wording("RULE_CTR_LOW",
                     Map.of("ctrLow", ctrLow),
@@ -112,9 +127,10 @@ public class EvolveSuggestSkill implements AiSkill<AttributionMapService.Observa
         if (ka) {
             // KA 版：多维诊断与原因假设（素材 / 商品 / 排序 / 人群），输出实验设计
             if (obs.crossProductOrders() > 0) {
-                facts.add(wording("FACT_CROSS_PRODUCT",
+                addFact(facts, limits, wording("FACT_CROSS_PRODUCT",
                         Map.of("count", obs.crossProductOrders()),
-                        "跨品成交 " + obs.crossProductOrders() + " 单：入口商品与购买商品不一致"));
+                        "跨品成交 " + obs.crossProductOrders() + " 单：入口商品与购买商品不一致"),
+                        evidenceTag);
                 suggestions.add(wording("RULE_CROSS_PRODUCT",
                         Map.of(),
                         "假设：排序结构导致跨品购买，建议 A/B 实验验证排序调整"));

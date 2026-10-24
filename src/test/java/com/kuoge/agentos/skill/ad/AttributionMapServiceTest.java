@@ -4,7 +4,7 @@ import com.kuoge.agentos.channel.AdMapping;
 import com.kuoge.agentos.channel.Window;
 import com.kuoge.agentos.channel.mock.MockAdChannelAdapter;
 import com.kuoge.agentos.delivery.DeliveryItem;
-import com.kuoge.agentos.delivery.DeliveryItemRepository;
+import com.kuoge.agentos.delivery.InMemoryDeliveryItemStore;
 import com.kuoge.agentos.delivery.DeliveryItemStatus;
 import com.kuoge.agentos.skill.SkillContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AttributionMapServiceTest {
 
     private MockAdChannelAdapter channel;
-    private DeliveryItemRepository repository;
+    private InMemoryDeliveryItemStore repository;
     private AdFactStore factStore;
     private DataIngestService ingest;
     private AttributionMapService attribution;
@@ -29,8 +29,8 @@ class AttributionMapServiceTest {
     @BeforeEach
     void setUp() {
         channel = new MockAdChannelAdapter();
-        repository = new DeliveryItemRepository();
-        factStore = new AdFactStore();
+        repository = new InMemoryDeliveryItemStore();
+        factStore = new InMemoryAdFactStore();
         ingest = new DataIngestService(channel, factStore);
         attribution = new AttributionMapService(repository, factStore);
     }

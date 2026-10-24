@@ -1,0 +1,4 @@
+{"name":"常规-正常投放","spendCents":50000,"impressions":10000,"clicks":500,"attributedOrders":3,"crossProductOrders":1,"unknownOrders":1,"evidenceRefs":["ad_fact_platform:ad_101@2026W43"],"gaps":[],"expect":{"degraded":false}}
+{"name":"常规-多窗口证据","spendCents":120000,"impressions":30000,"clicks":900,"attributedOrders":8,"crossProductOrders":2,"unknownOrders":0,"evidenceRefs":["ad_fact_platform:ad_102@2026W42","ad_fact_platform:ad_102@2026W43"],"gaps":[],"expect":{"degraded":false}}
+{"name":"常规-零成交有证据","spendCents":8000,"impressions":5000,"clicks":120,"attributedOrders":0,"crossProductOrders":0,"unknownOrders":0,"evidenceRefs":["ad_fact_platform:ad_103@2026W43"],"gaps":[],"expect":{"degraded":false}}
+{"name":"常规-含数据缺口","spendCents":30000,"impressions":8000,"clicks":400,"attributedOrders":2,"crossProductOrders":0,"unknownOrders":3,"evidenceRefs":["ad_fact_platform:ad_104@2026W43"],"gaps":["margin","refund"],"expect":{"degraded":false}}

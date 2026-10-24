@@ -2,7 +2,7 @@ package com.kuoge.agentos.skill.ad;
 
 import com.kuoge.agentos.channel.InsightReport;
 import com.kuoge.agentos.delivery.DeliveryItem;
-import com.kuoge.agentos.delivery.DeliveryItemRepository;
+import com.kuoge.agentos.delivery.DeliveryItemStore;
 import com.kuoge.agentos.skill.DomainService;
 import com.kuoge.agentos.skill.SkillContext;
 
@@ -35,10 +35,10 @@ public class AttributionMapService implements DomainService<String, AttributionM
         }
     }
 
-    private final DeliveryItemRepository repository;
+    private final DeliveryItemStore repository;
     private final AdFactStore factStore;
 
-    public AttributionMapService(DeliveryItemRepository repository, AdFactStore factStore) {
+    public AttributionMapService(DeliveryItemStore repository, AdFactStore factStore) {
         this.repository = repository;
         this.factStore = factStore;
     }
