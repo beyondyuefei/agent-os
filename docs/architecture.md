@@ -703,7 +703,60 @@ flowchart LR
 
 ---
 
-## 9. 演进方向（可选）
+## 9. 广告投流链路（投流 Agent 一期，feature/ads）
+
+> 依据：《投流 Agent（Meta）详细技术方案——套餐能力拆解与 Skill 设计》。代码集中在 `skill/ad`、`capability`、`delivery`、`channel`、`business/ads`、`api/AdsController`。
+
+### 9.1 链路与入口
+
+投流闭环按方案 SOP-A / SOP-B 串接，编排层为 `business/ads/DeliveryPipelineService`，REST 入口为 `api/AdsController`（`/api/ads`）：
+
+```mermaid
+flowchart LR
+    A[素材检查通过<br/>POST /items] --> B[ItemAssembleService<br/>组装+额度占用+批准快照]
+    C[母集合就绪<br/>POST /collections/:id/ready] --> D[待补项补齐 complete]
+    B --> E[submit<br/>Preflight 检查集 A]
+    D --> E
+    E --> F[负责人批准/退回<br/>approve/reject/resubmit]
+    F --> G[AdCreateExecuteService<br/>网关→Preflight B→幂等→通道]
+    G --> H[已创建 → OpsControlService ENABLE<br/>网关重检→Preflight B→通道 enable]
+    H --> I[运行中 ⇄ 暂停/恢复/结束<br/>停止类免门禁+独立审计]
+    I --> J[DataIngestScheduler<br/>cron 读 policy_profile]
+    J --> K[DataIngestService → AttributionMapService<br/>Observation 快照]
+    K --> L[ReviewDraftSkill / EvolveSuggestSkill<br/>EvidenceGuard 证据指针校验]
+    L --> M[人确认 → 路由执行 / ExperienceDistillSkill<br/>经验审核后生效]
+```
+
+关键规则（方案硬约束，均有测试锁定）：
+
+- 能力网关（`CapabilityGateway`）是所有写路径第一调用；停止类动作（PAUSE/END）不受套餐阻断但走独立审计；
+- 创建/启用/恢复前置检查集 B（`PreflightCheckService`），幂等键 = hash(deliveryItemId + 批准版本号），UNKNOWN 不自动重提、走反查；
+- `OpsControlService` 回执驱动：先调通道成功才迁移状态机，通道失败抛 `CHANNEL_UNAVAILABLE` 且状态不变；
+- AI Skill 只出草稿不写状态；`EvidenceGuard` 做 PostReasoning 证据指针校验，无证据打回重生成，仍不足降级为限制说明；
+- 版本线路由：`EvolveSuggestSkill` PRO(1.x)/KA(2.x) 由 `plan_capability_binding.skill_version` 决定；
+- `DataIngestScheduler` 每 tick 按租户 `PolicyProfile.cronExpr`（PRO 每日/KA 每小时）触发回流与归因。
+
+### 9.2 存储与持久化
+
+存储层统一为「接口 + InMemory + Jpa」三件套（同 SkillTemplateStore 先例）：
+
+| 接口 | InMemory（单测用） | JPA 实现（Spring 装配） |
+|---|---|---|
+| `DeliveryItemStore` | `InMemoryDeliveryItemStore` | `JpaDeliveryItemStore`（delivery_item + audit_entry，快照 JSON 列） |
+| `CapabilityStore` | `InMemoryCapabilityStore` | `JpaCapabilityStore`（方案 2.1 八表） |
+| `BudgetLedger` | `InMemoryBudgetLedger` | `JpaBudgetLedger`（悲观锁保恒等式） |
+| `AdFactStore` | `InMemoryAdFactStore` | `JpaAdFactStore`（ad_fact_platform / attribution_record / unknown_order / experience / gap_tag） |
+
+- 默认数据源：`jdbc:h2:file:./data/agentos`（本地持久化，重启不丢，`data/` 已 gitignore）；测试 profile 用内存 H2。
+- Meta 通道切换：`agentos.channel.meta.mode = mock|live`（`@ConditionalOnProperty`），live 实现的 `getCreationStatus`/`fetchInsights` 为二期预留。
+
+### 9.3 评测体系（一期最小集）
+
+- 规则层：十条验收规则由单测锁定（网关/幂等/恒等式/归因/版本线/经验门禁）。
+- AI Skill 最小评测集：`src/test/resources/eval/`（regular / regression / badcase 三批 jsonl）+ `AdSkillEvalTest`（MockLlmClient 确定性跑批，断言四段式、证据指针、规则编号可追溯）。
+- 模型层 Judge（位置随机化 / 稳定性选择 / Golden Set）与实验层灰度验收为二期资产，一期不建。
+
+## 10. 演进方向（可选）
 
 - 引入持久化队列与状态机，支持工作流断点续跑。
 - 将 `SharedMemory` 扩展为 Redis / 向量数据库，支持多实例与长期记忆。
