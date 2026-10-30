@@ -35,6 +35,9 @@ server:
   port: 8080
 
 agentos:
+  llm:
+    # 流式调用：长生成期间连接持续有数据，避免非流式被 idle 超时掐断；false 回退非流式
+    streaming: ${AGENTOS_LLM_STREAMING:true}
   feishu:
     approval:
       mock-mode: true
