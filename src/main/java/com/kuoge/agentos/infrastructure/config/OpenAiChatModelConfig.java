@@ -15,7 +15,7 @@ public class OpenAiChatModelConfig {
     @Bean
     public OpenAiChatModel openAiChatModel(
             @Value("${spring.ai.openai.api-key:}") String apiKey,
-            @Value("${spring.ai.openai.chat.options.model:k3.1-pro}") String model,
+            @Value("${spring.ai.openai.chat.options.model:k3-256k}") String model,
             @Value("${spring.ai.openai.chat.options.reasoning-effort:high}") String reasoningEffort,
             @Value("${spring.ai.openai.base-url:https://api.kimi.com/coding/v1}") String baseUrl) {
 

@@ -26,8 +26,8 @@ spring:
       base-url: ${KIMI_BASE_URL:https://api.kimi.com/coding/v1}
       chat:
         options:
-          # k3.1-pro：旗舰模型（thinking 默认 max）；省额度可用 k3-256k，大上下文用 k3
-          model: ${KIMI_MODEL:k3.1-pro}
+          # k3-256k：日常任务省额度（11s 级）；深度分析用 k3.1-pro / k3.1-pro-highspeed（KIMI_MODEL 覆盖）
+          model: ${KIMI_MODEL:k3-256k}
           # thinking 强度：low / high / max；max 在复杂提示词下耗时过长，默认 high
           reasoning-effort: ${KIMI_REASONING_EFFORT:high}
 
