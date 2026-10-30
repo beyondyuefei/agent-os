@@ -21,10 +21,13 @@ spring:
 
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:}
+      # Kimi Code 会员 API（OpenAI 兼容）；Key 从 Kimi Code Console 创建后注入环境变量，不入库
+      api-key: ${KIMI_API_KEY:}
+      base-url: ${KIMI_BASE_URL:https://api.kimi.com/coding/v1}
       chat:
         options:
-          model: gpt-4o-mini
+          # k3-256k：日常任务省额度；大上下文场景改 k3（1M，额度消耗约 2 倍）
+          model: ${KIMI_MODEL:k3-256k}
 
 server:
   port: 8080
