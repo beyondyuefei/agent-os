@@ -24,11 +24,11 @@ class ReviewDraftSkillTest {
                 3, 1, 1, List.of("ad_fact_platform:ad_1"), List.of());
     }
 
-    /** 捕获实际发给模型的提示词，返回固定草稿 */
+    /** 捕获实际发给模型的提示词，返回固定草稿（带证据指针，过 EvidenceGuard） */
     private LlmClient capturing(AtomicReference<String> captured) {
         return (systemPrompt, messages) -> {
             captured.set(messages.get(0).extractText());
-            return LlmResponse.text("草稿");
+            return LlmResponse.text("【事实】周期内花费 50000 分（证据: ad_fact_platform:ad_1）。");
         };
     }
 
@@ -39,7 +39,7 @@ class ReviewDraftSkillTest {
 
         SkillResult<String> result = skill.run(SkillContext.of("t1"), observation());
 
-        assertEquals("草稿", result.output());
+        assertEquals("【事实】周期内花费 50000 分（证据: ad_fact_platform:ad_1）。", result.output());
         String prompt = captured.get();
         assertTrue(prompt.contains("spend = 50000"), "提示词应由 md 模板渲染并注入快照变量");
         assertTrue(prompt.contains("证据指针：ad_fact_platform:ad_1"));

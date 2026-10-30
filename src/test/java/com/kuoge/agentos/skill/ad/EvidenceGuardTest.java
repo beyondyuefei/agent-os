@@ -174,4 +174,45 @@ class EvidenceGuardTest {
         assertTrue(result.output().contains("证据不足"));
         assertTrue(guard.check(result.output(), List.of()).pass());
     }
+
+    @Test
+    void markdownSectionHeadersAreChecked() {
+        // 真实 K3 冒烟输出形态：markdown 标题而非【】标记，不得绕过校验
+        String draft = """
+                # 四段式复盘草稿
+
+                ## 一、事实
+
+                1. 本周期投放花费为 0 分。［证据：spend = 0］
+
+                ## 二、限制
+
+                1. 快照未提供预算设置。
+                """;
+
+        EvidenceGuard.Check check = guard.check(draft, List.of("ad_fact_platform:ad_1@2026W43"));
+
+        assertFalse(check.pass(), "markdown 标题的事实段同样受证据指针校验");
+        assertEquals(1, check.violations().size());
+    }
+
+    @Test
+    void markdownSectionWithProperEvidencePasses() {
+        String draft = """
+                ## 事实
+                - 周期内花费 50000 分（证据: ad_fact_platform:ad_1@2026W43）
+                ## 假设
+                - 转化表现需更长窗口确认
+                """;
+
+        assertTrue(guard.check(draft, List.of("ad_fact_platform:ad_1@2026W43")).pass());
+    }
+
+    @Test
+    void unstructuredDraftTreatedAsFactSection() {
+        // 识别不出任何段结构 → 最严口径：全部按事实段校验，防止换格式绕过
+        String draft = "本期转化表现优异，建议加大投放。";
+
+        assertFalse(guard.check(draft, List.of("ad_fact_platform:ad_1@2026W43")).pass());
+    }
 }
